@@ -4,12 +4,30 @@
     const sidebarOverlay = document.getElementById('sidebar-overlay');
     const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
     const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+    const newChatBtn = document.getElementById('new-chat-btn');
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item[data-view]');
     const appViews = document.querySelectorAll('.app-view');
     const activeViewTitle = document.getElementById('active-view-title');
     const sidebarLocationName = document.getElementById('sidebar-location-name');
     const sidebarLocationId = document.getElementById('sidebar-location-id');
     const sidebarConnectGhlBtn = document.getElementById('sidebar-connect-ghl');
+
+    // Theme Toggle
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const savedTheme = localStorage.getItem('theme_preference') || 'light';
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
+    } else {
+        document.body.classList.remove('dark-theme');
+    }
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+            localStorage.setItem('theme_preference', isDark ? 'dark' : 'light');
+        });
+    }
 
     // DOM Elements - GHL Connection Modal
     const ghlStatusPill = document.getElementById('ghl-status-pill');
@@ -45,27 +63,63 @@
         locationName: localStorage.getItem('ghl_location_name') || ''
     };
 
-    // Configure Marked Markdown Renderer
+    // Configure Custom ChatGPT-Style Marked Renderer
     if (typeof marked !== 'undefined') {
+        const renderer = new marked.Renderer();
+
+        renderer.code = function (code, language) {
+            const lang = (language || 'text').toLowerCase();
+            const validLang = (typeof hljs !== 'undefined' && hljs.getLanguage(lang)) ? lang : '';
+            const highlightedCode = validLang ? hljs.highlight(code, { language: validLang }).value : escapeHtml(code);
+            const displayLang = (language || 'code').toUpperCase();
+
+            return `
+                <div class="code-block-wrapper">
+                    <div class="code-block-header">
+                        <span class="code-lang-tag">${escapeHtml(displayLang)}</span>
+                        <button type="button" class="copy-code-btn" data-code="${escapeHtml(code)}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            <span>Copy code</span>
+                        </button>
+                    </div>
+                    <pre><code class="hljs ${validLang}">${highlightedCode}</code></pre>
+                </div>
+            `;
+        };
+
         marked.setOptions({
-            highlight: function (code, lang) {
-                if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang)) {
-                    return hljs.highlight(code, { language: lang }).value;
-                }
-                return typeof hljs !== 'undefined' ? hljs.highlightAuto(code).value : code;
-            },
-            breaks: true
+            renderer: renderer,
+            breaks: true,
+            gfm: true
         });
     }
 
+    // Delegate copy button clicks
+    document.addEventListener('click', (e) => {
+        const copyBtn = e.target.closest('.copy-code-btn');
+        if (!copyBtn) return;
+        const code = copyBtn.getAttribute('data-code') || copyBtn.closest('.code-block-wrapper').querySelector('code').innerText;
+        navigator.clipboard.writeText(code).then(() => {
+            const textSpan = copyBtn.querySelector('span');
+            if (textSpan) textSpan.textContent = 'Copied!';
+            copyBtn.classList.add('copied');
+            setTimeout(() => {
+                if (textSpan) textSpan.textContent = 'Copy code';
+                copyBtn.classList.remove('copied');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy code:', err);
+        });
+    });
+
     updateGHLStatusUI();
 
-    // Check & verify initial saved connection
+    // Check initial connection
     if (ghlConfig.locationId && ghlConfig.accessToken) {
         verifyGhlConnection(ghlConfig.locationId, ghlConfig.accessToken, false);
     }
 
-    // Load available AI models into dropdown
+    // Load available models
     fetchModelsCatalog();
 
     // Fetch and populate AI models from backend catalog
@@ -117,6 +171,18 @@
         } catch (e) {
             console.error('Failed to load models catalog:', e);
         }
+    }
+
+    // New Chat Button
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', () => {
+            messagesList.innerHTML = '';
+            if (welcomeScreen) welcomeScreen.classList.remove('hidden');
+            if (userInput) {
+                userInput.value = '';
+                userInput.focus();
+            }
+        });
     }
 
     // Sidebar View Navigation
@@ -219,12 +285,12 @@
                 localStorage.setItem('ghl_access_token', token);
                 localStorage.setItem('ghl_location_name', ghlConfig.locationName);
 
-                ghlModalSuccess.textContent = `✅ Connected to GHL Sub-Account: ${ghlConfig.locationName}`;
+                ghlModalSuccess.textContent = `Connected to GHL Sub-Account: ${ghlConfig.locationName}`;
                 ghlModalSuccess.classList.remove('hidden');
                 updateGHLStatusUI();
-                setTimeout(closeGhlModal, 1500);
+                setTimeout(closeGhlModal, 1200);
             } else {
-                ghlModalError.textContent = `❌ ${res.message}`;
+                ghlModalError.textContent = `${res.message}`;
                 ghlModalError.classList.remove('hidden');
             }
         });
@@ -257,13 +323,19 @@
             ghlStatusLabel.textContent = ghlConfig.locationName || 'Connected';
             sidebarLocationName.textContent = ghlConfig.locationName || 'Connected Sub-Account';
             sidebarLocationId.textContent = `ID: ${ghlConfig.locationId}`;
-            sidebarConnectGhlBtn.innerHTML = `<span>🟢 Connected</span>`;
+            sidebarConnectGhlBtn.innerHTML = `
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <span>Connected Sub-Account</span>
+            `;
         } else {
             ghlStatusPill.className = 'ghl-status-pill disconnected';
             ghlStatusLabel.textContent = 'Disconnected';
             sidebarLocationName.textContent = 'No Sub-Account';
             sidebarLocationId.textContent = 'Connect location to execute actions';
-            sidebarConnectGhlBtn.innerHTML = `<span>⚡ Connect Sub-Account</span>`;
+            sidebarConnectGhlBtn.innerHTML = `
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>Location Access</span>
+            `;
         }
     }
 
@@ -279,11 +351,11 @@
         }
     }
 
-    // Auto-expand chat textarea
+    // Auto-expand textarea
     if (userInput) {
         userInput.addEventListener('input', () => {
             userInput.style.height = 'auto';
-            userInput.style.height = Math.min(userInput.scrollHeight, 160) + 'px';
+            userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
             if (sendBtn) sendBtn.disabled = userInput.value.trim().length === 0;
         });
 
@@ -319,7 +391,7 @@
                 userInput.value = tmpl;
                 userInput.focus();
                 userInput.style.height = 'auto';
-                userInput.style.height = Math.min(userInput.scrollHeight, 160) + 'px';
+                userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
                 if (sendBtn) sendBtn.disabled = false;
             }
         });
@@ -404,7 +476,7 @@
                                 
                                 resultBadge.innerHTML = isSuccess ? 
                                     `✅ Action Executed: ${data.result.message || 'Asset Created'}` : 
-                                    `❌ Action Failed: ${errMsg} ${isAuthErr ? '<button type="button" class="connect-ghl-btn inline-connect-trigger" style="margin-left: 10px; font-size: 11px; padding: 3px 10px;">⚡ Connect Location</button>' : ''}`;
+                                    `❌ Action Failed: ${errMsg} ${isAuthErr ? '<button type="button" class="connect-ghl-btn inline-connect-trigger" style="margin-left: 10px; font-size: 11px; padding: 3px 10px;">Connect Location</button>' : ''}`;
                                 
                                 botBodyEl.appendChild(resultBadge);
                                 
@@ -509,10 +581,10 @@
                         <div class="kanban-column">
                             <div class="column-header">
                                 <h3>${escapeHtml(st.name)}</h3>
-                                <span class="badge count">0</span>
+                                <span class="badge">0 Deals</span>
                             </div>
-                            <div class="kanban-cards-container">
-                                <div class="empty-column-placeholder">No active opportunities</div>
+                            <div class="kanban-cards-container" style="color: var(--text-muted); font-size: 12px; padding: 20px 0; text-align: center;">
+                                No active opportunities
                             </div>
                         </div>
                     `).join('');
@@ -550,9 +622,9 @@
             if (fieldsData.success && fieldsData.data && fieldsListContainer) {
                 const fields = fieldsData.data.customFields || [];
                 fieldsListContainer.innerHTML = fields.map(f => `
-                    <div class="field-item-card">
-                        <span class="field-name"><strong>${escapeHtml(f.name)}</strong></span>
-                        <span class="field-type-badge">${escapeHtml(f.dataType || 'TEXT')}</span>
+                    <div class="field-item">
+                        <span><strong>${escapeHtml(f.name)}</strong></span>
+                        <span class="badge">${escapeHtml(f.dataType || 'TEXT')}</span>
                     </div>
                 `).join('') || '<p class="text-muted">No custom fields found.</p>';
             }
