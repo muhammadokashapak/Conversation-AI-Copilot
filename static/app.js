@@ -468,12 +468,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openSidebar() {
         sidebar.classList.remove('closed');
-        if (window.innerWidth <= 768) sidebarOverlay.style.display = 'block';
+        if (sidebarOverlay) sidebarOverlay.classList.add('active');
+        localStorage.setItem('sidebar_closed', 'false');
     }
 
     function closeSidebar() {
         sidebar.classList.add('closed');
-        sidebarOverlay.style.display = 'none';
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+        localStorage.setItem('sidebar_closed', 'true');
     }
 
     // GHL Modal Events
