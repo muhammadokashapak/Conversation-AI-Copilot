@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -22,7 +22,7 @@
         <!-- Sidebar Backdrop Overlay -->
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-        <!-- Left GHL Navigation Sidebar -->
+        <!-- Left GHL Navigation Sidebar (ChatGPT Clean Style) -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="ghl-brand-badge">
@@ -34,46 +34,35 @@
                 </button>
             </div>
 
-            <!-- Navigation Links -->
-            <nav class="sidebar-nav">
+            <!-- New Chat Trigger -->
+            <div class="sidebar-new-chat-wrapper">
                 <button class="new-chat-btn" id="new-chat-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <span>New Chat Thread</span>
+                    <span>New Chat</span>
                 </button>
+            </div>
 
-                <div class="nav-section-title">GHL AI COPILOT HUB</div>
-                <button class="nav-item active" data-view="view-chat">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    <span>Conversation AI</span>
-                </button>
-                <button class="nav-item" data-view="view-contacts">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    <span>Contacts & CRM</span>
-                </button>
-                <button class="nav-item" data-view="view-pipelines">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    <span>Pipelines & Deals</span>
-                </button>
-                <button class="nav-item" data-view="view-tags">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
-                    <span>Tags & Custom Fields</span>
-                </button>
+            <!-- Recent Chats History Section -->
+            <div class="history-section-header">
+                <span>RECENT CHATS</span>
+                <button class="clear-all-history-btn" id="clear-all-history-btn" title="Clear all history">Clear</button>
+            </div>
 
-                <div class="nav-section-title" style="margin-top: 16px;">AI RESOURCE MONITOR</div>
-                <button class="nav-item" id="sidebar-usage-btn">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
-                    <span>Model Usage & Quota</span>
-                </button>
+            <div class="history-list" id="history-list">
+                <!-- Dynamically populated via JS -->
+            </div>
 
-                <div class="nav-section-title" style="margin-top: 16px;">ACCOUNT SETTINGS</div>
-                <button class="nav-item" id="sidebar-connect-ghl">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    <span>Location Access</span>
-                </button>
-            </nav>
-
-            <!-- Sidebar User Profile Footer -->
+            <!-- Sidebar Footer Navigation & Location Card -->
             <div class="sidebar-footer">
+                <button class="footer-nav-item" id="sidebar-usage-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                    <span>AI Model Quotas</span>
+                </button>
+                <button class="footer-nav-item" id="sidebar-connect-ghl">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span>Location Settings</span>
+                </button>
+
                 <div class="ghl-profile-card">
                     <div class="ghl-avatar">🏢</div>
                     <div class="profile-info">
@@ -84,7 +73,7 @@
             </div>
         </aside>
 
-        <!-- Main View Area -->
+        <!-- Main Conversational Workspace -->
         <main class="main-content">
             <!-- Top Header -->
             <header class="top-header">
@@ -93,7 +82,7 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
                     <div class="header-title-container">
-                        <span class="active-title" id="active-view-title">Conversation AI Copilot</span>
+                        <span class="active-title" id="active-chat-title">Conversation AI Copilot</span>
                     </div>
                 </div>
 
@@ -118,9 +107,9 @@
                 </div>
             </header>
 
-            <!-- VIEW 1: Conversation AI View -->
-            <div class="app-view active" id="view-chat">
-                <!-- Chat Container -->
+            <!-- Chat Area -->
+            <div class="chat-wrapper">
+                <!-- Chat Scroll Container -->
                 <div class="chat-container" id="chat-container">
                     <!-- Welcome Hero Screen -->
                     <div class="welcome-screen" id="welcome-screen">
@@ -224,89 +213,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- VIEW 2: Contacts & CRM Hub -->
-            <div class="app-view hidden" id="view-contacts">
-                <div class="view-content-wrapper">
-                    <div class="view-toolbar">
-                        <div class="toolbar-title-group">
-                            <h2>Contacts & CRM Hub</h2>
-                            <p>Live Contacts in connected GHL Sub-Account</p>
-                        </div>
-                    </div>
-
-                    <div class="ghl-card-table-wrap">
-                        <table class="ghl-data-table">
-                            <thead>
-                                <tr>
-                                    <th>Contact Name</th>
-                                    <th>Email</th>
-                                    <th>Phone</th>
-                                    <th>Tags</th>
-                                    <th>Location ID</th>
-                                </tr>
-                            </thead>
-                            <tbody id="contacts-table-body">
-                                <tr>
-                                    <td colspan="5" class="empty-row">Connect a GHL Sub-Account or send a prompt to list contacts.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW 3: Pipelines & Deals Visualizer -->
-            <div class="app-view hidden" id="view-pipelines">
-                <div class="view-content-wrapper">
-                    <div class="view-toolbar">
-                        <div class="toolbar-title-group">
-                            <h2>Pipelines & Sales Opportunities</h2>
-                            <p>Pipelines and Deal Stages in connected GHL Sub-Account</p>
-                        </div>
-                    </div>
-
-                    <div class="kanban-pipeline-grid" id="pipeline-kanban-container">
-                        <div class="empty-state-box" style="padding: 40px; text-align: center; width: 100%;">
-                            <h3>No Pipelines Loaded</h3>
-                            <p style="color: var(--text-muted); margin-top: 6px;">Connect your GHL Sub-Account or ask HighLevel AI: <em>"Build a sales pipeline named Solar Leads"</em></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW 4: Tags & Custom Fields Manager -->
-            <div class="app-view hidden" id="view-tags">
-                <div class="view-content-wrapper">
-                    <div class="view-toolbar">
-                        <div class="toolbar-title-group">
-                            <h2>Location Data Dictionary</h2>
-                            <p>Tags & Custom Fields configured in Sub-Account</p>
-                        </div>
-                    </div>
-
-                    <div class="data-dictionary-grid">
-                        <div class="dict-card">
-                            <h3>Location Tags</h3>
-                            <p class="dict-subtext">Used for lead segmentation & workflow triggers.</p>
-                            <div class="tags-cloud" id="tags-pills-container">
-                                <span class="tag-chip">VIP Lead</span>
-                                <span class="tag-chip">Hot Prospect</span>
-                                <span class="tag-chip">Solar Lead</span>
-                            </div>
-                        </div>
-
-                        <div class="dict-card">
-                            <h3>Custom Fields</h3>
-                            <p class="dict-subtext">Custom data attributes for contacts.</p>
-                            <div class="fields-list" id="custom-fields-list">
-                                <div class="field-item"><span>Project Budget</span><span class="badge">TEXT</span></div>
-                                <div class="field-item"><span>Installation Date</span><span class="badge">DATE</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </main>
     </div>
 
@@ -323,7 +229,7 @@
                 </button>
             </div>
             <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                <p class="modal-description">Real-time tracking of request counters, token usage percentages, and available quota per model. Click <strong>Select Model</strong> to switch active AI.</p>
+                <p class="modal-description">Real-time tracking of request counters, token usage percentages, and available quota per model. Click <strong>Switch Model</strong> to change active AI.</p>
 
                 <div class="usage-models-grid" id="usage-models-grid">
                     <!-- Populated dynamically via JS -->

@@ -5,9 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
     const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
     const newChatBtn = document.getElementById('new-chat-btn');
-    const navItems = document.querySelectorAll('.sidebar-nav .nav-item[data-view]');
-    const appViews = document.querySelectorAll('.app-view');
-    const activeViewTitle = document.getElementById('active-view-title');
+    const historyList = document.getElementById('history-list');
+    const clearAllHistoryBtn = document.getElementById('clear-all-history-btn');
+    const activeChatTitle = document.getElementById('active-chat-title');
     const sidebarLocationName = document.getElementById('sidebar-location-name');
     const sidebarLocationId = document.getElementById('sidebar-location-id');
     const sidebarConnectGhlBtn = document.getElementById('sidebar-connect-ghl');
@@ -62,16 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const cardItems = document.querySelectorAll('.card-item');
     const chipBtns = document.querySelectorAll('.chip-btn');
 
-    // DOM Elements - Data Views
-    const contactsTableBody = document.getElementById('contacts-table-body');
-    const pipelineKanbanContainer = document.getElementById('pipeline-kanban-container');
-
+    // State Variables
     let ghlConfig = {
         locationId: localStorage.getItem('ghl_location_id') || '',
         accessToken: localStorage.getItem('ghl_access_token') || '',
         locationName: localStorage.getItem('ghl_location_name') || ''
     };
 
+    let chatThreads = loadSavedThreads();
+    let currentThreadId = localStorage.getItem('ghl_active_thread_id') || null;
     let cachedModelsData = [];
 
     // Configure Custom ChatGPT-Style Marked Renderer
@@ -133,7 +132,189 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load available models with live usage percentages
     fetchModelsCatalog();
 
-    // Fetch and populate AI models with usage percentages from backend
+    // Initialize Recent Chats & load active thread if any
+    renderRecentChatsList();
+    if (currentThreadId && getThreadById(currentThreadId)) {
+        loadThread(currentThreadId);
+    } else {
+        createNewThread(false);
+    }
+
+    // ==========================================
+    // CHAT THREADS & RECENT CHATS MANAGEMENT
+    // ==========================================
+
+    function loadSavedThreads() {
+        try {
+            return JSON.parse(localStorage.getItem('ghl_chat_threads') || '[]');
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveThreads() {
+        try {
+            localStorage.setItem('ghl_chat_threads', JSON.stringify(chatThreads));
+        } catch (e) {
+            console.warn('Failed to save threads:', e);
+        }
+    }
+
+    function getThreadById(id) {
+        return chatThreads.find(t => t.id === id);
+    }
+
+    function createNewThread(shouldFocus = true) {
+        currentThreadId = 'thread_' + Date.now();
+        localStorage.setItem('ghl_active_thread_id', currentThreadId);
+        
+        messagesList.innerHTML = '';
+        if (welcomeScreen) welcomeScreen.classList.remove('hidden');
+        if (activeChatTitle) activeChatTitle.textContent = 'Conversation AI Copilot';
+        
+        if (userInput) {
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            if (shouldFocus) userInput.focus();
+        }
+        renderRecentChatsList();
+    }
+
+    function loadThread(threadId) {
+        const thread = getThreadById(threadId);
+        if (!thread) return;
+
+        currentThreadId = thread.id;
+        localStorage.setItem('ghl_active_thread_id', currentThreadId);
+
+        if (activeChatTitle) activeChatTitle.textContent = thread.title || 'Conversation AI Copilot';
+        messagesList.innerHTML = '';
+
+        if (!thread.messages || thread.messages.length === 0) {
+            if (welcomeScreen) welcomeScreen.classList.remove('hidden');
+        } else {
+            if (welcomeScreen) welcomeScreen.classList.add('hidden');
+            thread.messages.forEach(msg => {
+                if (msg.role === 'user') {
+                    appendMessageUI('user', msg.content);
+                } else {
+                    renderAssistantMessageUI(msg);
+                }
+            });
+        }
+
+        renderRecentChatsList();
+        scrollToBottom();
+        if (window.innerWidth <= 768) closeSidebar();
+    }
+
+    function addMessageToCurrentThread(role, content, toolBadges = []) {
+        let thread = getThreadById(currentThreadId);
+        if (!thread) {
+            // Generate title from first message
+            const title = content.length > 35 ? content.substring(0, 35) + '...' : content;
+            thread = {
+                id: currentThreadId || ('thread_' + Date.now()),
+                title: title,
+                createdAt: new Date().toISOString(),
+                messages: []
+            };
+            chatThreads.unshift(thread);
+            currentThreadId = thread.id;
+            localStorage.setItem('ghl_active_thread_id', currentThreadId);
+            if (activeChatTitle) activeChatTitle.textContent = title;
+        }
+
+        thread.messages.push({
+            role: role,
+            content: content,
+            toolBadges: toolBadges,
+            timestamp: new Date().toISOString()
+        });
+
+        saveThreads();
+        renderRecentChatsList();
+    }
+
+    function deleteThread(threadId, event) {
+        if (event) event.stopPropagation();
+        chatThreads = chatThreads.filter(t => t.id !== threadId);
+        saveThreads();
+
+        if (currentThreadId === threadId) {
+            if (chatThreads.length > 0) {
+                loadThread(chatThreads[0].id);
+            } else {
+                createNewThread();
+            }
+        } else {
+            renderRecentChatsList();
+        }
+    }
+
+    function renderRecentChatsList() {
+        if (!historyList) return;
+
+        if (chatThreads.length === 0) {
+            historyList.innerHTML = `
+                <div class="history-empty-placeholder">
+                    No recent chats yet.<br>Start a new conversation!
+                </div>
+            `;
+            return;
+        }
+
+        historyList.innerHTML = chatThreads.map(thread => {
+            const isActive = thread.id === currentThreadId;
+            return `
+                <button class="history-item ${isActive ? 'active' : ''}" data-thread-id="${escapeHtml(thread.id)}">
+                    <div class="history-item-left">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <span class="history-item-title">${escapeHtml(thread.title || 'Untitled Conversation')}</span>
+                    </div>
+                    <button class="delete-history-btn" data-delete-id="${escapeHtml(thread.id)}" title="Delete chat">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </button>
+            `;
+        }).join('');
+
+        // Attach click listeners to history items
+        historyList.querySelectorAll('.history-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const threadId = item.getAttribute('data-thread-id');
+                loadThread(threadId);
+            });
+        });
+
+        // Attach delete listeners
+        historyList.querySelectorAll('.delete-history-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const threadId = btn.getAttribute('data-delete-id');
+                deleteThread(threadId, e);
+            });
+        });
+    }
+
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', () => createNewThread(true));
+    }
+
+    if (clearAllHistoryBtn) {
+        clearAllHistoryBtn.addEventListener('click', () => {
+            if (chatThreads.length === 0) return;
+            if (confirm('Are you sure you want to clear all chat history?')) {
+                chatThreads = [];
+                saveThreads();
+                createNewThread();
+            }
+        });
+    }
+
+    // ==========================================
+    // MODELS CATALOG & USAGE MONITOR
+    // ==========================================
+
     async function fetchModelsCatalog() {
         if (!modelSelector) return;
         try {
@@ -200,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Usage Monitor Modal Handlers
+    // Usage Modal Handlers
     if (openUsageModalBtn) openUsageModalBtn.addEventListener('click', openUsageModal);
     if (sidebarUsageBtn) sidebarUsageBtn.addEventListener('click', openUsageModal);
     if (closeUsageModalBtn) closeUsageModalBtn.addEventListener('click', closeUsageModal);
@@ -257,7 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
 
-        // Attach switch handlers
         const switchBtns = usageModelsGrid.querySelectorAll('.select-model-btn');
         switchBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -273,50 +453,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // New Chat Button
-    if (newChatBtn) {
-        newChatBtn.addEventListener('click', () => {
-            messagesList.innerHTML = '';
-            if (welcomeScreen) welcomeScreen.classList.remove('hidden');
-            if (userInput) {
-                userInput.value = '';
-                userInput.focus();
-            }
-        });
-    }
+    // ==========================================
+    // SIDEBAR & MODAL HANDLERS
+    // ==========================================
 
-    // Sidebar View Navigation
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const viewId = item.getAttribute('data-view');
-            navItems.forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-
-            appViews.forEach(v => {
-                if (v.id === viewId) {
-                    v.classList.remove('hidden');
-                } else {
-                    v.classList.add('hidden');
-                }
-            });
-
-            if (viewId === 'view-chat') activeViewTitle.textContent = 'Conversation AI Copilot';
-            else if (viewId === 'view-contacts') {
-                activeViewTitle.textContent = 'Contacts & CRM Hub';
-                fetchContactsData();
-            } else if (viewId === 'view-pipelines') {
-                activeViewTitle.textContent = 'Pipelines & Sales Deals';
-                fetchPipelinesData();
-            } else if (viewId === 'view-tags') {
-                activeViewTitle.textContent = 'Location Data Dictionary';
-                fetchTagsAndFieldsData();
-            }
-
-            if (window.innerWidth <= 768) closeSidebar();
-        });
-    });
-
-    // Sidebar Toggle
     if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', toggleSidebar);
     if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
@@ -336,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarOverlay.style.display = 'none';
     }
 
-    // Modal Events
+    // GHL Modal Events
     if (openGhlModalBtn) openGhlModalBtn.addEventListener('click', openGhlModal);
     if (sidebarConnectGhlBtn) sidebarConnectGhlBtn.addEventListener('click', openGhlModal);
     if (closeGhlModalBtn) closeGhlModalBtn.addEventListener('click', closeGhlModal);
@@ -423,19 +563,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ghlStatusLabel.textContent = ghlConfig.locationName || 'Connected';
             sidebarLocationName.textContent = ghlConfig.locationName || 'Connected Sub-Account';
             sidebarLocationId.textContent = `ID: ${ghlConfig.locationId}`;
-            sidebarConnectGhlBtn.innerHTML = `
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                <span>Connected Sub-Account</span>
-            `;
         } else {
             ghlStatusPill.className = 'ghl-status-pill disconnected';
             ghlStatusLabel.textContent = 'Disconnected';
             sidebarLocationName.textContent = 'No Sub-Account';
             sidebarLocationId.textContent = 'Connect location to execute actions';
-            sidebarConnectGhlBtn.innerHTML = `
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                <span>Location Access</span>
-            `;
         }
     }
 
@@ -451,7 +583,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Auto-expand textarea
+    // ==========================================
+    // CHAT EXECUTION & PROMPT HANDLING
+    // ==========================================
+
     if (userInput) {
         userInput.addEventListener('input', () => {
             userInput.style.height = 'auto';
@@ -471,7 +606,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sendBtn) sendBtn.addEventListener('click', handleSendPrompt);
 
-    // Starter Prompt Cards
     cardItems.forEach(card => {
         card.addEventListener('click', () => {
             const prompt = card.getAttribute('data-prompt');
@@ -507,7 +641,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (welcomeScreen) welcomeScreen.classList.add('hidden');
 
-        appendMessage('user', prompt);
+        appendMessageUI('user', prompt);
+        addMessageToCurrentThread('user', prompt);
+
         if (loadingIndicator) loadingIndicator.classList.remove('hidden');
         scrollToBottom();
 
@@ -521,6 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const botBodyEl = botMsgWrap.querySelector('.assistant-body');
 
         let accumulatedText = '';
+        let recordedBadges = [];
 
         try {
             const response = await fetch('/api/chat-agent', {
@@ -538,7 +675,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({ detail: response.statusText }));
-                botBodyEl.innerHTML = marked.parse(`⚠️ **Error (${response.status}):** ${errData.detail || 'Execution failed.'}`);
+                const errMsg = `⚠️ **Error (${response.status}):** ${errData.detail || 'Execution failed.'}`;
+                botBodyEl.innerHTML = marked.parse(errMsg);
+                addMessageToCurrentThread('assistant', errMsg);
                 return;
             }
 
@@ -566,6 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 toolBadge.className = 'tool-execution-badge';
                                 toolBadge.innerHTML = `⚡ Invoking GHL API: <strong>${data.name}</strong> (${escapeHtml(JSON.stringify(data.args))})`;
                                 botBodyEl.appendChild(toolBadge);
+                                recordedBadges.push({ type: 'tool_start', text: toolBadge.innerHTML });
                                 scrollToBottom();
                             } else if (data.type === 'tool_result') {
                                 const resultBadge = document.createElement('div');
@@ -579,6 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     `❌ Action Failed: ${errMsg} ${isAuthErr ? '<button type="button" class="connect-ghl-btn inline-connect-trigger" style="margin-left: 10px; font-size: 11px; padding: 3px 10px;">Connect Location</button>' : ''}`;
                                 
                                 botBodyEl.appendChild(resultBadge);
+                                recordedBadges.push({ type: 'tool_result', text: resultBadge.innerHTML, isSuccess: isSuccess });
                                 
                                 const inlineTrigger = resultBadge.querySelector('.inline-connect-trigger');
                                 if (inlineTrigger) {
@@ -602,16 +743,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-            // Refresh models usage after prompt finishes
+
+            if (accumulatedText) {
+                addMessageToCurrentThread('assistant', accumulatedText, recordedBadges);
+            }
             fetchModelsCatalog();
         } catch (err) {
             if (loadingIndicator) loadingIndicator.classList.add('hidden');
-            botBodyEl.innerHTML = marked.parse(`⚠️ **Connection Error:** ${err.message}`);
+            const errStr = `⚠️ **Connection Error:** ${err.message}`;
+            botBodyEl.innerHTML = marked.parse(errStr);
+            addMessageToCurrentThread('assistant', errStr);
         }
         scrollToBottom();
     }
 
-    function appendMessage(role, content) {
+    function appendMessageUI(role, content) {
         const msgWrap = document.createElement('div');
         msgWrap.className = `message-wrapper ${role}`;
         if (role === 'user') {
@@ -624,6 +770,27 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
     }
 
+    function renderAssistantMessageUI(msg) {
+        const msgWrap = document.createElement('div');
+        msgWrap.className = 'message-wrapper assistant';
+        let badgesHtml = '';
+        if (msg.toolBadges && msg.toolBadges.length > 0) {
+            badgesHtml = msg.toolBadges.map(b => `
+                <div class="tool-execution-badge ${b.isSuccess === false ? 'error' : (b.isSuccess === true ? 'success' : '')}">${b.text}</div>
+            `).join('');
+        }
+
+        const parsedContent = typeof marked !== 'undefined' ? marked.parse(msg.content || '') : escapeHtml(msg.content);
+        msgWrap.innerHTML = `
+            <div class="assistant-avatar">⚡</div>
+            <div class="assistant-body">
+                ${badgesHtml}
+                <div class="agent-markdown-text">${parsedContent}</div>
+            </div>
+        `;
+        messagesList.appendChild(msgWrap);
+    }
+
     function scrollToBottom() {
         if (chatContainer) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -634,104 +801,5 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!text) return '';
         const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
         return String(text).replace(/[&<>"']/g, m => map[m]);
-    }
-
-    // Fetch Live Contacts Data
-    async function fetchContactsData() {
-        if (!ghlConfig.locationId || !ghlConfig.accessToken || !contactsTableBody) return;
-        try {
-            const res = await fetch('/api/ghl/contacts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ location_id: ghlConfig.locationId, access_token: ghlConfig.accessToken })
-            });
-            const data = await res.json();
-            if (data.success && data.data && data.data.contacts) {
-                const contacts = data.data.contacts;
-                if (contacts.length > 0) {
-                    contactsTableBody.innerHTML = contacts.map(c => `
-                        <tr>
-                            <td><strong>${escapeHtml((c.firstName || '') + ' ' + (c.lastName || ''))}</strong></td>
-                            <td>${escapeHtml(c.email || 'N/A')}</td>
-                            <td>${escapeHtml(c.phone || 'N/A')}</td>
-                            <td>${(c.tags || []).map(t => `<span class="tag-chip">${escapeHtml(t)}</span>`).join(' ') || 'None'}</td>
-                            <td><code>${escapeHtml(c.locationId || ghlConfig.locationId)}</code></td>
-                        </tr>
-                    `).join('');
-                }
-            }
-        } catch (e) {
-            console.warn('Fetch contacts warning:', e);
-        }
-    }
-
-    // Fetch Live Pipelines Data
-    async function fetchPipelinesData() {
-        if (!ghlConfig.locationId || !ghlConfig.accessToken || !pipelineKanbanContainer) return;
-        try {
-            const res = await fetch('/api/ghl/pipelines', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ location_id: ghlConfig.locationId, access_token: ghlConfig.accessToken })
-            });
-            const data = await res.json();
-            if (data.success && data.data && data.data.pipelines) {
-                const pipelines = data.data.pipelines;
-                if (pipelines.length > 0) {
-                    const firstPipe = pipelines[0];
-                    pipelineKanbanContainer.innerHTML = (firstPipe.stages || []).map(st => `
-                        <div class="kanban-column">
-                            <div class="column-header">
-                                <h3>${escapeHtml(st.name)}</h3>
-                                <span class="badge">0 Deals</span>
-                            </div>
-                            <div class="kanban-cards-container" style="color: var(--text-muted); font-size: 12px; padding: 20px 0; text-align: center;">
-                                No active opportunities
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            }
-        } catch (e) {
-            console.warn('Fetch pipelines warning:', e);
-        }
-    }
-
-    // Fetch Tags & Custom Fields
-    async function fetchTagsAndFieldsData() {
-        if (!ghlConfig.locationId || !ghlConfig.accessToken) return;
-        const tagsPillContainer = document.getElementById('tags-pills-container');
-        const fieldsListContainer = document.getElementById('custom-fields-list');
-
-        try {
-            const tagsRes = await fetch('/api/ghl/tags', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ location_id: ghlConfig.locationId, access_token: ghlConfig.accessToken })
-            });
-            const tagsData = await tagsRes.json();
-            if (tagsData.success && tagsData.data && tagsPillContainer) {
-                const tags = tagsData.data.tags || [];
-                tagsPillContainer.innerHTML = tags.map(t => `<span class="tag-chip">${escapeHtml(t.name)}</span>`).join(' ') || '<p class="text-muted">No custom tags created yet.</p>';
-            }
-
-            const fieldsRes = await fetch('/api/ghl/custom-fields', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ location_id: ghlConfig.locationId, access_token: ghlConfig.accessToken })
-            });
-            const fieldsData = await fieldsRes.json();
-            if (fieldsData.success && fieldsData.data && fieldsListContainer) {
-                const fields = fieldsData.data.customFields || [];
-                fieldsListContainer.innerHTML = fields.map(f => `
-                    <div class="field-item">
-                        <span><strong>${escapeHtml(f.name)}</strong></span>
-                        <span class="badge">${escapeHtml(f.dataType || 'TEXT')}</span>
-                    </div>
-                `).join('') || '<p class="text-muted">No custom fields found.</p>';
-            }
-        } catch (e) {
-            console.warn('Fetch tags & fields error:', e);
-        }
     }
 });
