@@ -30,6 +30,7 @@ if os.path.exists(ENV_PATH):
 
 from ghl_client import GHLSubAccountClient
 from agent_engine import GHLAgentExecutionEngine, MODELS_CATALOG
+from usage_tracker import usage_tracker
 
 def get_server_keys() -> Dict[str, str]:
     """Load API keys for Gemini, Groq, and OpenRouter from environment."""
@@ -41,8 +42,8 @@ def get_server_keys() -> Dict[str, str]:
 
 app = FastAPI(
     title="Conversation AI Copilot for GoHighLevel",
-    description="Multi-Model Autonomous Action Execution Agent for GoHighLevel powered by Gemini, Groq, and OpenRouter",
-    version="2.0.0"
+    description="Multi-Model Autonomous Action Execution Agent for GoHighLevel with Live Usage Tracking",
+    version="2.1.0"
 )
 
 app.add_middleware(
@@ -80,10 +81,18 @@ async def health_check():
 
 @app.get("/api/models")
 async def get_models_catalog():
-    """Returns the list of all available AI models categorized by provider."""
+    """Returns the list of all available AI models categorized by provider with live usage statistics."""
     keys = get_server_keys()
+    enriched_models = []
+    
+    for m in MODELS_CATALOG:
+        m_copy = dict(m)
+        stats = usage_tracker.get_model_stats(m["id"])
+        m_copy["usage"] = stats
+        enriched_models.append(m_copy)
+
     return {
-        "models": MODELS_CATALOG,
+        "models": enriched_models,
         "active_providers": {
             "gemini": bool(keys["gemini"]),
             "groq": bool(keys["groq"]),
@@ -91,6 +100,20 @@ async def get_models_catalog():
         },
         "default_model": "gemini-3.6-flash"
     }
+
+@app.get("/api/usage-stats")
+async def get_all_usage_stats():
+    """Returns full usage monitoring summary for all models."""
+    res = {}
+    for m in MODELS_CATALOG:
+        res[m["id"]] = {
+            "name": m["name"],
+            "provider": m["provider"],
+            "category": m["category"],
+            "badge": m["badge"],
+            "stats": usage_tracker.get_model_stats(m["id"])
+        }
+    return res
 
 @app.post("/api/ghl/verify-token")
 async def verify_ghl_token(req: VerifyTokenRequest):
@@ -165,6 +188,10 @@ async def agent_chat_endpoint(req: AgentChatRequest):
     )
 
     selected_model = req.selected_model or "gemini-3.6-flash"
+
+    # Track usage stats
+    estimated_tokens = max(50, len(prompt) // 4 + 200)
+    usage_tracker.record_usage(selected_model, tokens_est=estimated_tokens)
 
     async def sse_generator():
         try:

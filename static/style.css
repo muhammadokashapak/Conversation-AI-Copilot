@@ -1361,3 +1361,135 @@ body.dark-theme .tool-execution-badge {
     font-size: 11px;
     font-weight: 600;
 }
+
+/* Model Usage & Quota Monitor Styles */
+.usage-quick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.usage-quick-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.modal-box.large-modal {
+    max-width: 760px;
+    width: 95%;
+}
+
+.usage-models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.usage-model-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.15s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.usage-model-card.active-model {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1.5px var(--primary-color);
+    background: var(--bg-secondary);
+}
+
+.usage-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.usage-model-info h4 {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.usage-model-cat {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.usage-progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.usage-progress-bar-bg {
+    width: 100%;
+    height: 7px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.usage-progress-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.usage-stats-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-muted);
+}
+
+.usage-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.select-model-btn {
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    transition: all 0.15s ease;
+}
+
+.select-model-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.select-model-btn.active {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+    pointer-events: none;
+}

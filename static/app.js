@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements - Sidebar & Views
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -28,6 +28,15 @@
             localStorage.setItem('theme_preference', isDark ? 'dark' : 'light');
         });
     }
+
+    // DOM Elements - Usage Monitor Modal
+    const usageModal = document.getElementById('usage-monitor-modal');
+    const openUsageModalBtn = document.getElementById('open-usage-modal-btn');
+    const sidebarUsageBtn = document.getElementById('sidebar-usage-btn');
+    const closeUsageModalBtn = document.getElementById('close-usage-modal');
+    const doneUsageModalBtn = document.getElementById('done-usage-modal');
+    const usageModelsGrid = document.getElementById('usage-models-grid');
+    const activeModelUsagePill = document.getElementById('active-model-usage-pill');
 
     // DOM Elements - GHL Connection Modal
     const ghlStatusPill = document.getElementById('ghl-status-pill');
@@ -62,6 +71,8 @@
         accessToken: localStorage.getItem('ghl_access_token') || '',
         locationName: localStorage.getItem('ghl_location_name') || ''
     };
+
+    let cachedModelsData = [];
 
     // Configure Custom ChatGPT-Style Marked Renderer
     if (typeof marked !== 'undefined') {
@@ -119,10 +130,10 @@
         verifyGhlConnection(ghlConfig.locationId, ghlConfig.accessToken, false);
     }
 
-    // Load available models
+    // Load available models with live usage percentages
     fetchModelsCatalog();
 
-    // Fetch and populate AI models from backend catalog
+    // Fetch and populate AI models with usage percentages from backend
     async function fetchModelsCatalog() {
         if (!modelSelector) return;
         try {
@@ -130,6 +141,7 @@
             if (!resp.ok) return;
             const data = await resp.json();
             const models = data.models || [];
+            cachedModelsData = models;
             if (models.length === 0) return;
 
             const categories = {};
@@ -156,7 +168,8 @@
                 catModels.forEach(m => {
                     const opt = document.createElement('option');
                     opt.value = m.id;
-                    opt.textContent = `${m.name} [${m.badge}]`;
+                    const usagePct = (m.usage && m.usage.usage_percentage !== undefined) ? m.usage.usage_percentage : 0;
+                    opt.textContent = `${m.name} (${usagePct}% Used • ${m.badge})`;
                     if (m.id === savedModel) {
                         opt.selected = true;
                     }
@@ -165,12 +178,99 @@
                 modelSelector.appendChild(optGroup);
             }
 
+            updateActiveModelUsageDisplay();
+
             modelSelector.addEventListener('change', () => {
                 localStorage.setItem('selected_ai_model', modelSelector.value);
+                updateActiveModelUsageDisplay();
             });
         } catch (e) {
             console.error('Failed to load models catalog:', e);
         }
+    }
+
+    function updateActiveModelUsageDisplay() {
+        if (!modelSelector || !activeModelUsagePill || cachedModelsData.length === 0) return;
+        const currentModelId = modelSelector.value;
+        const currentModel = cachedModelsData.find(m => m.id === currentModelId);
+        if (currentModel && currentModel.usage) {
+            const usagePct = currentModel.usage.usage_percentage || 0;
+            const remainingPct = currentModel.usage.remaining_percentage || 100;
+            activeModelUsagePill.textContent = `${currentModel.name.split(' ')[0]}: ${usagePct}% Used (${remainingPct}% Left)`;
+        }
+    }
+
+    // Usage Monitor Modal Handlers
+    if (openUsageModalBtn) openUsageModalBtn.addEventListener('click', openUsageModal);
+    if (sidebarUsageBtn) sidebarUsageBtn.addEventListener('click', openUsageModal);
+    if (closeUsageModalBtn) closeUsageModalBtn.addEventListener('click', closeUsageModal);
+    if (doneUsageModalBtn) doneUsageModalBtn.addEventListener('click', closeUsageModal);
+
+    async function openUsageModal() {
+        await fetchModelsCatalog();
+        renderUsageModalGrid();
+        if (usageModal) usageModal.classList.remove('hidden');
+    }
+
+    function closeUsageModal() {
+        if (usageModal) usageModal.classList.add('hidden');
+    }
+
+    function renderUsageModalGrid() {
+        if (!usageModelsGrid) return;
+        const currentModelId = modelSelector ? modelSelector.value : '';
+        usageModelsGrid.innerHTML = cachedModelsData.map(m => {
+            const usage = m.usage || { usage_percentage: 0, remaining_percentage: 100, daily_requests: 0, daily_limit: 100, daily_tokens: 0, status: 'Healthy' };
+            const isActive = m.id === currentModelId;
+            const usagePct = usage.usage_percentage || 0;
+            const barColor = usagePct < 60 ? '#10b981' : (usagePct < 85 ? '#f59e0b' : '#ef4444');
+
+            return `
+                <div class="usage-model-card ${isActive ? 'active-model' : ''}">
+                    <div class="usage-card-top">
+                        <div class="usage-model-info">
+                            <h4>${escapeHtml(m.name)}</h4>
+                            <span class="usage-model-cat">${escapeHtml(m.category)} • <strong>${escapeHtml(m.badge)}</strong></span>
+                        </div>
+                        <span class="badge" style="background-color: ${barColor}22; color: ${barColor}; border: 1px solid ${barColor}55;">
+                            ${usagePct}% Used
+                        </span>
+                    </div>
+
+                    <div class="usage-progress-container">
+                        <div class="usage-progress-bar-bg">
+                            <div class="usage-progress-bar-fill" style="width: ${Math.max(2, usagePct)}%; background-color: ${barColor};"></div>
+                        </div>
+                        <div class="usage-stats-meta">
+                            <span>Reqs: ${usage.daily_requests || 0} / ${usage.daily_limit || 200}</span>
+                            <span>Remaining: ${usage.remaining_percentage || 100}%</span>
+                        </div>
+                    </div>
+
+                    <div class="usage-card-actions">
+                        <span style="font-size: 11px; color: var(--text-muted);">Est. Tokens: ${usage.daily_tokens || 0}</span>
+                        <button type="button" class="select-model-btn ${isActive ? 'active' : ''}" data-model-id="${escapeHtml(m.id)}">
+                            ${isActive ? '✓ Active Model' : 'Switch Model'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Attach switch handlers
+        const switchBtns = usageModelsGrid.querySelectorAll('.select-model-btn');
+        switchBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetModelId = btn.getAttribute('data-model-id');
+                if (targetModelId && modelSelector) {
+                    modelSelector.value = targetModelId;
+                    localStorage.setItem('selected_ai_model', targetModelId);
+                    updateActiveModelUsageDisplay();
+                    renderUsageModalGrid();
+                    setTimeout(closeUsageModal, 300);
+                }
+            });
+        });
     }
 
     // New Chat Button
@@ -420,7 +520,7 @@
         messagesList.appendChild(botMsgWrap);
         const botBodyEl = botMsgWrap.querySelector('.assistant-body');
 
-        let accumulatedText = "";
+        let accumulatedText = '';
 
         try {
             const response = await fetch('/api/chat-agent', {
@@ -444,7 +544,7 @@
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let buffer = "";
+            let buffer = '';
 
             while (true) {
                 const { value, done } = await reader.read();
@@ -452,7 +552,7 @@
 
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n\n');
-                buffer = lines.pop() || "";
+                buffer = lines.pop() || '';
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
@@ -486,7 +586,7 @@
                                 }
                                 scrollToBottom();
                             } else if (data.type === 'chunk') {
-                                accumulatedText += data.text || "";
+                                accumulatedText += data.text || '';
                                 let textContainer = botBodyEl.querySelector('.agent-markdown-text');
                                 if (!textContainer) {
                                     textContainer = document.createElement('div');
@@ -502,6 +602,8 @@
                     }
                 }
             }
+            // Refresh models usage after prompt finishes
+            fetchModelsCatalog();
         } catch (err) {
             if (loadingIndicator) loadingIndicator.classList.add('hidden');
             botBodyEl.innerHTML = marked.parse(`⚠️ **Connection Error:** ${err.message}`);
