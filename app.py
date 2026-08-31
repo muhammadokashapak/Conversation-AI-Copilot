@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import json
 import asyncio
@@ -31,13 +31,15 @@ if os.path.exists(ENV_PATH):
 from ghl_client import GHLSubAccountClient
 from agent_engine import GHLAgentExecutionEngine, MODELS_CATALOG
 from usage_tracker import usage_tracker
+from key_pool_manager import openrouter_key_pool
 
 def get_server_keys() -> Dict[str, str]:
-    """Load API keys for Gemini, Groq, and OpenRouter from environment."""
+    """Load API keys for Gemini, Groq, and active OpenRouter key from the dynamic pool."""
+    active_or_key = openrouter_key_pool.get_active_key() or os.getenv("OPENROUTER_API_KEY", "").strip()
     return {
         "gemini": os.getenv("GEMINI_API_KEY", "").strip(),
         "groq": os.getenv("GROQ_API_KEY", "").strip(),
-        "openrouter": os.getenv("OPENROUTER_API_KEY", "").strip()
+        "openrouter": active_or_key
     }
 
 app = FastAPI(
@@ -55,11 +57,20 @@ app.add_middleware(
 )
 
 # Request Models
+class AttachmentItem(BaseModel):
+    name: str
+    type: str = "file"  # 'image' or 'file'
+    mime_type: Optional[str] = ""
+    data: str = ""  # Base64 data URL or raw text
+    size: Optional[int] = 0
+
 class AgentChatRequest(BaseModel):
     prompt: str
     location_id: Optional[str] = ""
     access_token: Optional[str] = ""
     selected_model: Optional[str] = "gemini-3.6-flash"
+    history: Optional[List[Dict[str, Any]]] = []
+    attachments: Optional[List[AttachmentItem]] = []
 
 class VerifyTokenRequest(BaseModel):
     location_id: str
@@ -106,14 +117,18 @@ async def get_all_usage_stats():
     """Returns full usage monitoring summary for all models."""
     res = {}
     for m in MODELS_CATALOG:
-        res[m["id"]] = {
-            "name": m["name"],
-            "provider": m["provider"],
-            "category": m["category"],
-            "badge": m["badge"],
-            "stats": usage_tracker.get_model_stats(m["id"])
-        }
-    return res
+        res[m["id"]] = usage_tracker.get_model_stats(m["id"])
+    return {"success": True, "stats": res}
+
+@app.get("/api/openrouter/pool-status")
+async def get_openrouter_pool_status():
+    """Returns real-time credit status and active rotation state for OpenRouter key pool."""
+    openrouter_key_pool.poll_all_keys()
+    return {
+        "success": True,
+        "active_key": openrouter_key_pool.get_active_key(),
+        "pool": openrouter_key_pool.get_pool_status()
+    }
 
 @app.post("/api/ghl/verify-token")
 async def verify_ghl_token(req: VerifyTokenRequest):
@@ -193,17 +208,21 @@ async def agent_chat_endpoint(req: AgentChatRequest):
     estimated_tokens = max(50, len(prompt) // 4 + 200)
     usage_tracker.record_usage(selected_model, tokens_est=estimated_tokens)
 
+    raw_attachments = [a.model_dump() for a in req.attachments] if req.attachments else []
+
     async def sse_generator():
         try:
             generator = engine.execute_agent_prompt(
                 prompt=prompt,
                 location_id=req.location_id or "",
                 access_token=req.access_token or "",
-                model_name=selected_model
+                model_name=selected_model,
+                history=req.history or [],
+                attachments=raw_attachments
             )
             for item in generator:
                 yield f"data: {json.dumps(item)}\n\n"
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0)
             
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
         except Exception as e:

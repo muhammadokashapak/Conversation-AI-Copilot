@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import time
 from datetime import datetime, timezone
@@ -13,8 +13,7 @@ DEFAULT_DAILY_LIMITS = {
     "gemini-3.7-flash": 1000,
     "gemini-3.5-flash": 1500,
     "gemini-2.5-flash": 1500,
-    "gemini-1.5-pro": 50,
-    "gemini-1.5-flash": 1500,
+    "gemini-2.5-pro": 500,
     
     # Groq LPU Tier
     "qwen/qwen3.8-27b": 1000,
