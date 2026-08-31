@@ -29,6 +29,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Sidebar Toggle & Overlay Logic
+    function toggleSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.toggle('open');
+        if (sidebarOverlay) {
+            const isOpen = sidebar.classList.contains('open');
+            sidebarOverlay.classList.toggle('active', isOpen);
+            sidebarOverlay.classList.toggle('hidden', !isOpen);
+        }
+    }
+
+    function closeSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.remove('open');
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('active');
+            sidebarOverlay.classList.add('hidden');
+        }
+    }
+
+    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', toggleSidebar);
+    if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+
     // DOM Elements - Usage Monitor Modal
     const usageModal = document.getElementById('usage-monitor-modal');
     const openUsageModalBtn = document.getElementById('open-usage-modal-btn');
@@ -3608,8 +3632,8 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
         userInput.addEventListener('input', () => {
             userInput.style.height = 'auto';
             userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
-            if (!isGenerating && sendBtn) {
-                sendBtn.disabled = userInput.value.trim().length === 0;
+            if (!isGenerating) {
+                updateSendButtonState();
             }
         });
 
@@ -3621,7 +3645,7 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                 e.preventDefault();
                 if (isGenerating) {
                     abortCurrentGeneration();
-                } else if (userInput.value.trim().length > 0) {
+                } else if (userInput.value.trim().length > 0 || (typeof pendingAttachments !== 'undefined' && pendingAttachments.length > 0)) {
                     handleSendPrompt();
                 }
             }
@@ -3642,9 +3666,11 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
         card.addEventListener('click', () => {
             const prompt = card.getAttribute('data-prompt');
             if (prompt) {
-                userInput.value = prompt;
-                userInput.style.height = 'auto';
-                if (sendBtn) sendBtn.disabled = false;
+                if (userInput) {
+                    userInput.value = prompt;
+                    userInput.style.height = 'auto';
+                }
+                updateSendButtonState();
                 handleSendPrompt();
             }
         });
@@ -3653,12 +3679,12 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
     chipBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const tmpl = btn.getAttribute('data-template');
-            if (tmpl) {
+            if (tmpl && userInput) {
                 userInput.value = tmpl;
                 userInput.focus();
                 userInput.style.height = 'auto';
                 userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
-                if (sendBtn) sendBtn.disabled = false;
+                updateSendButtonState();
             }
         });
     });

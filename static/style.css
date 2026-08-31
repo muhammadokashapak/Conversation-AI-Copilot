@@ -164,10 +164,13 @@ body {
     display: none !important;
     pointer-events: none !important;
 }
+
+/* ==========================================================================
    Smooth & Polished Sidebar (No Glitch / No Text Squishing)
    ========================================================================== */
 
 .sidebar-overlay {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
@@ -177,8 +180,20 @@ body {
     backdrop-filter: blur(4px);
     z-index: 90;
     opacity: 0;
-    pointer-events: none;
+    pointer-events: none !important;
     transition: opacity 0.25s ease;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+    pointer-events: auto !important;
+}
+
+.sidebar-overlay.hidden {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 .sidebar {
