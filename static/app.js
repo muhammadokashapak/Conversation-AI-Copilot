@@ -1264,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         renderRecentChatsList();
-        scrollToBottom();
+        setTimeout(() => scrollToLastUserQuery(), 80);
         if (window.innerWidth <= 768) closeSidebar();
     }
 
@@ -4215,6 +4215,26 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
     }
+
+    function scrollToLastUserQuery() {
+        if (!chatContainer || !messagesList) return;
+        const userMessages = messagesList.querySelectorAll('.message-wrapper.user');
+        if (userMessages.length > 0) {
+            const lastUserMsg = userMessages[userMessages.length - 1];
+            if (lastUserMsg) {
+                const containerRect = chatContainer.getBoundingClientRect();
+                const msgRect = lastUserMsg.getBoundingClientRect();
+                const targetScrollTop = chatContainer.scrollTop + (msgRect.top - containerRect.top) - 18;
+                chatContainer.scrollTo({
+                    top: Math.max(0, targetScrollTop),
+                    behavior: 'smooth'
+                });
+                return;
+            }
+        }
+        chatContainer.scrollTop = 0;
+    }
+
 
     function escapeHtml(text) {
         if (!text) return '';
