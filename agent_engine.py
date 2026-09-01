@@ -149,18 +149,18 @@ def get_token_budget(provider: str, intent: str) -> int:
     """
     Returns the optimal max_tokens for a given provider × intent combination.
     Guarantees sufficient token space so full HTML/CSS code blocks and tables are NEVER truncated,
-    while staying strictly within OpenRouter and Groq upfront credit quotas.
+    while staying strictly within Groq (8000 TPM limit) and OpenRouter credit quotas.
     """
     budgets = {
         'gemini': {
-            'full_build': 16000,
-            'iteration': 10000,
-            'quick_answer': 8000,
-        },
-        'groq': {
             'full_build': 8192,
             'iteration': 6000,
             'quick_answer': 4000,
+        },
+        'groq': {
+            'full_build': 5200,
+            'iteration': 4000,
+            'quick_answer': 2800,
         },
         'openrouter': {
             'full_build': 4000,
@@ -910,9 +910,9 @@ TASK DIRECTIVE: ITERATIVE MODIFICATION & REFINEMENT
 TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 =============================================================================
 - Output the complete, enterprise-grade architecture with executive formatting.
-- Deliver the 100% complete, fully styled single-block ````html <!DOCTYPE html> ... </html> ```` code.
-- Write modern, high-density, concise HTML/CSS/JS that delivers every requested step without verbose repetitive boilerplate, ensuring the entire 5-step application and CRM tables complete cleanly without truncation.
-- Format CRM Custom Fields, Tags, Pipelines, and Workflows into comprehensive Markdown tables and ASCII flow diagrams.
+- Structure the delivery clearly: 1. Funnel Routing Map, 2. HighLevel Pipeline & Custom Fields/Tags, 3. Drop-off Recovery Workflows, 4. Full Production Single-File HTML/CSS/JS Application.
+- Write modern, high-density, production-ready HTML/CSS/JS that delivers all 5 steps (Opt-in, VSL, Checkout, Upsell, Thank You) with responsive layout, clean utility styles, and interactive JavaScript.
+- Maintain efficient code density so the entire architecture and complete application code finish in 100% full completeness from `<!DOCTYPE html>` to `</html>` without truncation or cut-offs.
 - DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
 {tool_block}
 """
@@ -1355,6 +1355,13 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                         headers["Authorization"] = f"Bearer {next_key}"
                         active_key = next_key
                         resp = requests.post(api_url, headers=headers, json=payload, stream=(not can_call_tools), timeout=45)
+
+            # If Groq hits 413 TPM limit, reduce max_tokens and retry
+            if not is_openrouter and resp.status_code == 413:
+                if payload.get("max_tokens", 5200) > 3200:
+                    logger.info("Groq TPM limit hit (413). Retrying with reduced max_tokens=3200...")
+                    payload["max_tokens"] = 3200
+                    resp = requests.post(api_url, headers=headers, json=payload, stream=(not can_call_tools), timeout=45)
 
             if resp.status_code != 200:
                 err_body = resp.text
