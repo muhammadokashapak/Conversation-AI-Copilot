@@ -247,5 +247,7 @@ async def serve_index():
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 7861))
-    print(f"🚀 Launching Conversation AI Copilot on http://127.0.0.1:{port} ...")
-    uvicorn.run(app, host="127.0.0.1", port=port)
+    host = os.getenv("HOST", "0.0.0.0")
+    print(f"🚀 Launching Conversation AI Copilot on http://{host}:{port} ...")
+    uvicorn.run("app:app", host=host, port=port, reload=False)
+
