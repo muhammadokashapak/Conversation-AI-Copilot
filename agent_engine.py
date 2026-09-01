@@ -82,7 +82,10 @@ _FULL_BUILD_KEYWORDS = {
     'configuration:', 'target industry:', '1a', '2a', '3a', '4a', '5a',
     'option 1', 'option a', 'all 14 sections', 'full blueprint',
     'brand customization:', 'connected automations:', 'custom wizard specifications:',
-    'html/css', 'html and css', 'provide the html', 'checkout html', 'funnel architecture'
+    'html/css', 'html and css', 'provide the html', 'checkout html', 'funnel architecture',
+    'deep improvement', 'code review', 'implementation review', 'production ready code',
+    'production-ready', 'review the uploaded', 'architectural review', 'vsl funnel',
+    'booking funnel', 'booking architecture', '12 sections', 'replacement code'
 }
 
 
@@ -854,8 +857,38 @@ MANDATORY GOHIGHLEVEL (GHL) OPERATIONAL & ARCHITECTURAL RULES
     - Is it current?
     - Is it GHL-specific?
     - Could this have changed?
-    - Am I inventing anything?
-    If uncertain, do not guess. Mark it as **[REQUIRES CURRENT GHL DOCUMENTATION VERIFICATION]**.
+=============================================================================
+ARCHITECTURAL REVIEW & DEEP AUDIT METHODOLOGY (WHEN REVIEWING / AUDITING)
+=============================================================================
+When asked to perform a Deep Improvement Review, Code Audit, or Architecture Critique:
+Structure your response into these 12 comprehensive pillars:
+1. Current File / Implementation Analysis (HTML, CSS, JS, Validation, APIs, GHL, a11y)
+2. What the Solution Got Right
+3. What the Solution Got Wrong / Misleading
+4. Missing Production Capabilities
+5. GHL Native vs Custom vs API vs Webhook Matrix (with technical justification)
+6. Complete Flow Architecture (Clean ASCII diagram)
+7. CRM Fields & Tags (Standard & Custom properties)
+8. Pipeline Lifecycle Stages
+9. Workflow Automations (Workflow A: Confirmation & Reminders, Workflow B: Abandonment recovery with true intent detection)
+10. Security Architecture (Backend Relay Pattern, zero client token exposure)
+11. Production-Ready Replacement Code (Single complete ````html <!DOCTYPE html> ... </html> ```` block with Google Fonts, glassmorphism, responsive grid, dynamic date/slots, validation, loading/error states, and backend integration hooks)
+12. Implementation & Deployment Checklist
+
+=============================================================================
+MANDATORY CODE & DELIVERABLE QUALITY STANDARDS
+=============================================================================
+1. COMPLETE, SELF-CONTAINED CODE ONLY:
+   - When code is requested or relevant for funnels, landing pages, calendars, or checkouts, ALWAYS output the COMPLETE, single-block ````html <!DOCTYPE html> ... </html> ```` code with embedded `<style>` and `<script>`.
+   - NEVER truncate code, never omit CSS, and never leave incomplete placeholders.
+   - Close the code fence with `</html>\n```\n` immediately.
+2. ULTRA-MODERN ENTERPRISE AESTHETICS:
+   - Modern Google Fonts ('Plus Jakarta Sans', 'Outfit', 'Inter').
+   - Sleek dark glassmorphism (`--bg-dark: #080c14`, `--bg-card: rgba(15, 23, 42, 0.75)`).
+   - Zero bare/cheap browser inputs; glowing gradient CTA buttons with hover lift.
+   - Dynamic JavaScript calendar/timeslot pickers with timezone detection (`Intl.DateTimeFormat().resolvedOptions().timeZone`).
+3. METICULOUS CLASSIFICATION & ZERO FABRICATION:
+   - Label items with `[VERIFIED]`, `[PROVIDED]`, `[RECOMMENDED]`, `[ASSUMPTION]`, and `[REQUIRES CURRENT GHL DOCUMENTATION VERIFICATION]`.
 """
 
         tool_block = ""
@@ -872,57 +905,33 @@ AUTONOMOUS GHL API TOOL EXECUTION
         if intent == "quick_answer":
             return base_prompt + f"""
 =============================================================================
-TASK DIRECTIVE: DIRECT ANSWER, PROPOSAL & STRICT QUERY RELEVANCE
+TASK DIRECTIVE: AUTHORITATIVE & HIGH-QUALITY DIRECT RESPONSE
 =============================================================================
-- STRICT QUERY RELEVANCE: Answer ONLY what the user explicitly asks for.
-- ABSOLUTE PROHIBITION ON UNREQUESTED CODE & BLUEPRINTS: Do NOT output HTML/CSS code, landing page designs, form mapping tables, or 14-section blueprints UNLESS explicitly requested in the user's prompt.
-- MANDATORY CODE COMPLETION: If code IS explicitly requested by the user, provide the 100% complete, production-ready, single-block ````html <!DOCTYPE html> ... </html> ```` code with embedded `<style>` and `<script>`. NEVER omit code or output placeholder notes.
-- DO NOT CONTINUE PREVIOUS BLUEPRINT/SECTION DUMPS: If conversation history contains partial sections (e.g. 'SECTION 1', 'SECTION 2'...), DO NOT continue generating sections. Answer the user's latest query directly and conversationally.
-- NO UNSOLICITED SCOPING QUESTIONS: Do NOT output generic scoping questions (1A, 2A, 3A...) for general queries, job postings, or consultations.
-- PROPOSALS: Answer every question from the client thoroughly and concisely, using placeholders for missing personal data.
+- Answer with deep technical authority, clarity, and precision.
+- If code is requested or relevant to the solution, provide the 100% complete, production-ready, single-block ````html <!DOCTYPE html> ... </html> ```` code with embedded `<style>` and `<script>`.
+- Structure responses logically using clear headings, Markdown tables, and verified classifications.
+- For proposals: answer every client question thoroughly and concisely, using `[INSERT ACTUAL EXPERIENCE]` placeholders for personal data.
 {tool_block}
 """
 
         if intent == "iteration":
             return base_prompt + f"""
 =============================================================================
-TASK DIRECTIVE: ITERATIVE MODIFICATION
+TASK DIRECTIVE: ITERATIVE MODIFICATION & REFINEMENT
 =============================================================================
 - The user is modifying or refining a previously discussed configuration or asset.
-- Focus strictly on the requested modifications or tweaks without re-generating unchanged parts unnecessarily.
+- Focus on the requested modifications with senior-architect precision while keeping full code blocks complete.
 {tool_block}
 """
 
         # For full_build or custom builds
         return base_prompt + f"""
 =============================================================================
-TASK DIRECTIVE: STRICT QUERY SCOPE & ZERO UNSOLICITED CONTENT
+TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 =============================================================================
-- STRICT HISTORICAL ISOLATION: ONLY answer the user's latest prompt. NEVER re-answer, summarize, or prepend answers to prior questions from the conversation history (e.g., past SQL questions, hourly rate inquiries, or previous niche Q&As).
-- STRICT QUERY SCOPE: Output ONLY the specific deliverables and components explicitly requested in the prompt.
-- ABSOLUTE PROHIBITION ON UNREQUESTED SECTIONS:
-  • Do NOT output all 14 blueprint sections unless the user explicitly requests "all 14 sections".
-  • Do NOT generate full multi-email copy sequences unless the user explicitly asks for "email copy".
-  • Do NOT invent extra diagrams, form mapping tables, or valuation matrices unless explicitly specified.
-- PREMIUM VISUAL MARKDOWN FORMATTING & CODE EXCELLENCE STANDARDS:
-  1. Executive Architecture Header: Start with a clean Executive Badge header (`### ⚡ [Brand / Business Name] — Complete Architecture`), separated by horizontal rules (`---`).
-  2. WORLD-CLASS HIGH-CONVERTING UI & CSS ARCHITECTURE (ZERO BARE/CHEAP HTML):
-     • NEVER output a primitive, unstyled form or bare browser inputs.
-     • ALWAYS generate an ultra-modern, high-converting layout using a clean 2-column CSS Grid (`display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px;` with mobile `@media (max-width: 860px) {{ grid-template-columns: 1fr; }}`):
-       - Left Column: Hero Badge Pill (`⚡ VIP MEMBERSHIP ACCESS`), High-Impact Headline with gradient text highlights, Value Proposition Stack with checkmarks, Bulletproof 100% Risk-Free Guarantee Card & Trust Badges (`🔒 256-Bit SSL Encrypted`).
-       - Right Column: 2-Step Card or Interactive Booking Widget, dark glassmorphic input fields with focus glow, Order Summary box (`$0.00 today ➔ $97/mo after 14 days`), and a heavy glowing gradient submit CTA button.
-     • VSL VIDEO SECTION (WHEN REQUESTED): 16:9 Aspect container with glowing neon border, cinematic backdrop, animated Play Button (▶), overlay header (`🔴 LIVE MASTERCLASS`), and dynamic Watch-Progress Bar (`80% Unlocks Free 1-on-1 Assessment`) with interactive JavaScript simulator that unhides the next step!
-     • 1-ON-1 ASSESSMENT CALENDAR (WHEN REQUESTED): Interactive Glassmorphic Booking Widget with Coach Profile Header, 7 clickable Date Pills (Mon, Tue, Wed...), 4 clickable Time Slot Buttons (09:00 AM, 11:30 AM, 02:00 PM, 04:30 PM), and attendee input fields.
-     • BEAUTIFUL PRODUCTION CSS: Scoped within container, modern Google Font ('Plus Jakarta Sans' or 'Outfit'), sleek dark background (`#07090e` / `#0f172a`), neon brand accents (`#10b981` / `#38bdf8`), rounded corners (`border-radius: 14px`), and subtle glassmorphic backdrop blurs (`backdrop-filter: blur(16px);`).
-     • STRICT CODE BLOCK COMPLETION & CLOSING RULE:
-       - Wrap the COMPLETE document in ONE single ````html <!DOCTYPE html> ... </html> ```` code block with embedded `<style>` and `<script>`.
-       - You MUST close the code fence with `</html>\n```\n` immediately at the end of the code.
-       - NEVER dump raw markdown, text, or additional sections inside the code block without closing the code fence!
-     • Outputting separate CSS and HTML blocks is STRICTLY FORBIDDEN.
-  3. CRM Custom Fields & Tags: Format into clean, comprehensive Markdown Tables (`| Field Name | Unique Key | Data Type | Permissible Values |`).
-  4. Sales Pipeline Stages: Format into a clean table with Stage Name, Entry Trigger, Required Data, SLA, and Exit Criteria.
-  5. Automations & Drop-off Recovery: Format into visual ASCII logic diagrams (`[Trigger] ➔ [Wait] ➔ [Check]`) followed by structured step-by-step workflow blocks.
-  6. Zero Raw Messy Text: Ensure every piece of content uses clean typography, bold key terms, and proper markdown spacing.
+- Output the complete, enterprise-grade architecture with executive formatting.
+- Deliver the 100% complete, fully styled single-block ````html <!DOCTYPE html> ... </html> ```` code.
+- Format CRM Custom Fields, Tags, Pipelines, and Workflows into comprehensive Markdown tables and ASCII flow diagrams.
 {tool_block}
 """
 
