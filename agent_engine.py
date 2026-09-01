@@ -1072,13 +1072,15 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
         # Process attachments (images & documents)
         augmented_prompt, image_items = process_attachments_for_prompt(prompt, attachments)
 
-        # Hard mandate for OpenRouter / Groq models to ensure raw code is always printed
+        # Hard mandate for Groq models to ensure raw code is always printed
         if any(kw in prompt.lower() for kw in ['html', 'css', 'code', 'checkout', 'funnel', 'landing page', 'page', 'form']):
             messages[0]["content"] += (
                 "\n\n=============================================================================\n"
-                "CRITICAL CODE GENERATION MANDATE:\n"
-                "You MUST output the complete, raw ```html <!DOCTYPE html> ... </html>``` code block with "
-                "full embedded <style> and <script> markup. NEVER output an explanation or placeholder instead of code."
+                "CRITICAL CODE ARTIFACT MANDATE:\n"
+                "You MUST output the complete, 100% production-ready ```html <!DOCTYPE html> ... </html>``` code block "
+                "containing ALL 5 steps (Opt-in, VSL, Checkout, Upsell, Thank You) and interactive JavaScript navigation. "
+                "Use Tailwind CDN utilities (<script src=\"https://cdn.tailwindcss.com\"></script>) directly on elements. "
+                "NEVER omit, truncate, or summarize the HTML code block."
             )
 
         # Compress conversation history intelligently
