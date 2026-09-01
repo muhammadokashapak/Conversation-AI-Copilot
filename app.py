@@ -29,7 +29,7 @@ if os.path.exists(ENV_PATH):
     load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 from ghl_client import GHLSubAccountClient
-from agent_engine import GHLAgentExecutionEngine, MODELS_CATALOG
+from agent_engine import GHLAgentExecutionEngine, MODELS_CATALOG, format_friendly_error_banner
 from usage_tracker import usage_tracker
 from key_pool_manager import openrouter_key_pool
 
@@ -227,7 +227,7 @@ async def agent_chat_endpoint(req: AgentChatRequest):
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
         except Exception as e:
             logger.error(f"Chat streaming error: {e}", exc_info=True)
-            yield f"data: {json.dumps({'type': 'chunk', 'text': f'⚠️ **Execution Error:** {str(e)}'})}\n\n"
+            yield f"data: {json.dumps({'type': 'chunk', 'text': format_friendly_error_banner(str(e))})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")

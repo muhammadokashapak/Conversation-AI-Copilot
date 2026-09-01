@@ -128,11 +128,28 @@ def classify_prompt_intent(prompt: str) -> str:
 
 
 
+def format_friendly_error_banner(reason: str = "") -> str:
+    """
+    Returns a clean, polished, user-friendly error card when any AI provider
+    or server fails to generate a response.
+    """
+    return (
+        "> ⚠️ **System Notice: Unable to Generate Response**\n"
+        ">\n"
+        "> The AI engine is temporarily unable to generate a response at this moment due to high upstream traffic or model quota limits.\n"
+        ">\n"
+        "> 💡 **What you can do:**\n"
+        "> • **Try again in a few moments** — temporary network/provider limits usually clear within seconds.\n"
+        "> • **Switch AI Model** — Select **✨ Gemini 3.6 Flash** or **Groq Cloud** from the model dropdown below.\n"
+        "> • **Shorten your query** — If uploading large documents or complex requests, try breaking them into focused steps."
+    )
+
+
 def get_token_budget(provider: str, intent: str) -> int:
     """
     Returns the optimal max_tokens for a given provider × intent combination.
     Guarantees sufficient token space so full HTML/CSS code blocks and tables are NEVER truncated,
-    while staying within OpenRouter and Groq upfront credit quotas.
+    while staying strictly within OpenRouter and Groq upfront credit quotas.
     """
     budgets = {
         'gemini': {
@@ -141,17 +158,17 @@ def get_token_budget(provider: str, intent: str) -> int:
             'quick_answer': 6000,
         },
         'groq': {
-            'full_build': 5000,
-            'iteration': 3500,
-            'quick_answer': 3000,
+            'full_build': 4000,
+            'iteration': 3000,
+            'quick_answer': 2500,
         },
         'openrouter': {
-            'full_build': 3800,
-            'iteration': 3000,
-            'quick_answer': 2800,
+            'full_build': 1800,
+            'iteration': 1200,
+            'quick_answer': 1000,
         }
     }
-    return budgets.get(provider, budgets['openrouter']).get(intent, 3000)
+    return budgets.get(provider, budgets['openrouter']).get(intent, 1000)
 
 
 def get_temperature(intent: str, is_tool_mode: bool = False) -> float:
@@ -1200,22 +1217,23 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                         is_fallback=True
                     )
                     return
-            elif self.groq_key:
+            if self.groq_key:
                 yield from self._execute_openai_compatible(
                     prompt=prompt,
                     ghl=ghl,
                     is_ghl_connected=is_ghl_connected,
                     system_instruction=system_instruction,
-                    model_name="qwen/qwen3.8-27b",
+                    model_name="llama-3.3-70b-versatile",
                     api_url="https://api.groq.com/openai/v1/chat/completions",
                     api_key=self.groq_key,
                     provider_name="Groq Cloud",
                     location_id=location_id,
                     access_token=access_token,
-                    history=history
+                    history=history,
+                    is_fallback=True
                 )
                 return
-            yield {"type": "chunk", "text": f"⚠️ **Execution Error:** {str(last_exception)}"}
+            yield {"type": "chunk", "text": format_friendly_error_banner(str(last_exception))}
             return
 
         try:
@@ -1254,7 +1272,7 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 
         except Exception as e:
             logger.error(f"Gemini execution error: {e}", exc_info=True)
-            yield {"type": "chunk", "text": f"⚠️ **Agent Execution Error:** {str(e)}"}
+            yield {"type": "chunk", "text": format_friendly_error_banner(str(e))}
 
     def _execute_openai_compatible(
         self,
@@ -1283,7 +1301,7 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                 active_key = pool_key
 
         if not active_key:
-            yield {"type": "chunk", "text": f"⚠️ **Error:** {provider_name} API Key is not configured on the server."}
+            yield {"type": "chunk", "text": format_friendly_error_banner(f"{provider_name} API Key missing")}
             return
 
         headers = {
@@ -1328,7 +1346,7 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
         if provider_slug == "groq":
             # Auto-upgrade to high-capacity groq/compound (70,000 TPM) for full builds and large prompts
             if intent == "full_build" or "qwen" in model_name:
-                model_name = "groq/compound"
+                model_name = "llama-3.3-70b-versatile"
 
             est_prompt_tokens = sum(len(m.get("content", "")) // 4 for m in messages)
             if est_prompt_tokens > 5000 and not is_fallback:
@@ -1377,16 +1395,23 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
         try:
             resp = requests.post(api_url, headers=headers, json=payload, stream=(not can_call_tools), timeout=45)
             
-            # If OpenRouter returns credit or quota error (401, 402, 429), shift to next key in pool
+            # If OpenRouter returns credit or quota error (401, 402, 429), retry with lower max_tokens or rotate key
             if is_openrouter and resp.status_code in [401, 402, 429]:
-                from key_pool_manager import openrouter_key_pool
-                openrouter_key_pool.mark_key_depleted(active_key, resp.status_code, resp.text[:120])
-                next_key = openrouter_key_pool.get_active_key()
-                if next_key and next_key != active_key:
-                    logger.info(f"OpenRouter key {active_key[:12]}... depleted/throttled. Shifting to next pool key {next_key[:12]}... and retrying...")
-                    headers["Authorization"] = f"Bearer {next_key}"
-                    active_key = next_key
+                # Try with 800 max_tokens if 402 was due to upfront token credit limit
+                if resp.status_code == 402 and payload.get("max_tokens", 1000) > 800:
+                    logger.info("OpenRouter 402 credit cap hit. Retrying with reduced max_tokens=800...")
+                    payload["max_tokens"] = 800
                     resp = requests.post(api_url, headers=headers, json=payload, stream=(not can_call_tools), timeout=45)
+
+                if resp.status_code in [401, 402, 429]:
+                    from key_pool_manager import openrouter_key_pool
+                    openrouter_key_pool.mark_key_depleted(active_key, resp.status_code, resp.text[:120])
+                    next_key = openrouter_key_pool.get_active_key()
+                    if next_key and next_key != active_key:
+                        logger.info(f"OpenRouter key {active_key[:12]}... depleted/throttled. Shifting to next pool key {next_key[:12]}... and retrying...")
+                        headers["Authorization"] = f"Bearer {next_key}"
+                        active_key = next_key
+                        resp = requests.post(api_url, headers=headers, json=payload, stream=(not can_call_tools), timeout=45)
 
             if resp.status_code != 200:
                 err_body = resp.text
@@ -1398,16 +1423,32 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                 
                 logger.warning(f"{provider_name} API Error ({resp.status_code}): {err_msg}")
                 
-                # If Groq returns 413 (Payload Too Large) or 429 (Rate Limit), seamlessly failover to OpenRouter Key Pool
+                # If OpenRouter fails with 402/429/500, seamlessly failover to Groq Cloud (Free high speed LPU)
+                if is_openrouter and self.groq_key and (resp.status_code in [402, 429, 500, 502, 503] or "credits" in err_msg.lower()):
+                    logger.info("OpenRouter credit exhausted. Seamlessly routing to Groq Cloud...")
+                    yield from self._execute_openai_compatible(
+                        prompt=prompt,
+                        ghl=ghl,
+                        is_ghl_connected=is_ghl_connected,
+                        system_instruction=system_instruction,
+                        model_name="llama-3.3-70b-versatile",
+                        api_url="https://api.groq.com/openai/v1/chat/completions",
+                        api_key=self.groq_key,
+                        provider_name="Groq Cloud",
+                        location_id=location_id,
+                        access_token=access_token,
+                        history=history,
+                        intent=intent,
+                        is_fallback=True
+                    )
+                    return
+
+                # If Groq returns 413/429, failover to OpenRouter
                 if not is_openrouter and (resp.status_code in [413, 429] or "too large" in err_msg.lower() or "limit 8000" in err_msg.lower()):
                     from key_pool_manager import openrouter_key_pool
                     pool_key = openrouter_key_pool.get_active_key()
                     if pool_key:
                         logger.info("Groq returned 413/429. Seamlessly shifting to OpenRouter Key Pool...")
-                        yield {
-                            "type": "chunk",
-                            "text": "> ℹ️ **Notice:** Groq rate limit reached. Seamlessly shifting to **OpenRouter** (Llama 3.3 70B)...\n\n---\n\n"
-                        }
                         yield from self._execute_openai_compatible(
                             prompt=prompt,
                             ghl=ghl,
@@ -1425,32 +1466,8 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                         )
                         return
 
-                # If credits depleted (402), rate limited (429), or payload exceeded (413), seamlessly failover to Gemini if not already in fallback
-                if not is_fallback and (resp.status_code in [402, 413, 429] or "credits" in err_msg.lower() or "quota" in err_msg.lower() or "too large" in err_msg.lower()):
-                    if self.gemini_client:
-                        logger.info(f"Failing over from {provider_name} ({model_name}) to Gemini 3.6 Flash due to token quota/credits...")
-                        yield {
-                            "type": "chunk",
-                            "text": f"> ℹ️ **Notice:** The selected {provider_name} model's token quota is currently depleted or insufficient. Automatically switching to high-capacity **✨ Gemini 3.6 Flash** to complete your request seamlessly...\n\n---\n\n"
-                        }
-                        yield from self._execute_gemini(
-                            prompt=prompt,
-                            ghl=ghl,
-                            is_ghl_connected=is_ghl_connected,
-                            system_instruction=system_instruction,
-                            model_name="gemini-3.6-flash",
-                            location_id=location_id,
-                            access_token=access_token,
-                            history=history,
-                            intent=intent,
-                            is_fallback=True
-                        )
-                        return
-                    else:
-                        yield {"type": "chunk", "text": f"⚠️ **Notice:** This model's token quota is currently depleted. Please switch to **✨ Gemini 3.6 Flash** in the model selector to continue."}
-                        return
-
-                yield {"type": "chunk", "text": f"⚠️ **{provider_name} API Error ({resp.status_code}):** {err_msg}"}
+                # If all retries and failovers fail, display a clean, friendly error banner
+                yield {"type": "chunk", "text": format_friendly_error_banner(err_msg)}
                 return
 
             if is_openrouter:
