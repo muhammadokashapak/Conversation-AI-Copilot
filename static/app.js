@@ -1140,11 +1140,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize Recent Chats & load active thread if any
     renderRecentChatsList();
-    if (currentThreadId && getThreadById(currentThreadId)) {
+    if (currentThreadId && getThreadById(currentThreadId) && getThreadById(currentThreadId).messages && getThreadById(currentThreadId).messages.length > 0) {
         loadThread(currentThreadId);
+    } else if (chatThreads.length > 0) {
+        const recentWithMsgs = chatThreads.find(t => t.messages && t.messages.length > 0);
+        if (recentWithMsgs) {
+            loadThread(recentWithMsgs.id);
+        } else {
+            createNewThread(false);
+        }
     } else {
         createNewThread(false);
     }
+
 
     // ==========================================
     // CHAT THREADS & RECENT CHATS MANAGEMENT
@@ -1277,18 +1285,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeChatTitle) activeChatTitle.textContent = title;
         }
 
-        const msgObj = {
-            id: messageId || ('msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
-            role: role,
-            content: content,
-            toolBadges: toolBadges,
-            timestamp: new Date().toISOString()
-        };
+        const effectiveId = messageId || ('msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
+        const existingIdx = thread.messages ? thread.messages.findIndex(m => m.id === effectiveId) : -1;
+        
+        if (existingIdx !== -1) {
+            thread.messages[existingIdx].content = content;
+            thread.messages[existingIdx].toolBadges = toolBadges;
+        } else {
+            if (!thread.messages) thread.messages = [];
+            thread.messages.push({
+                id: effectiveId,
+                role: role,
+                content: content,
+                toolBadges: toolBadges,
+                timestamp: new Date().toISOString()
+            });
+        }
 
-        thread.messages.push(msgObj);
         saveThreads();
         renderRecentChatsList();
-        return msgObj.id;
+        return effectiveId;
     }
 
     function deleteMessageFromThread(messageId, msgElement) {
@@ -4080,11 +4096,18 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
         }
 
         if (role === 'user') {
+            const isLong = (content && (content.length > 140 || content.split('\n').length > 2));
             msgWrap.innerHTML = `
                 <div class="user-body">
                     ${isQueued ? '<div class="queued-status-badge">⏳ Queued — Will generate next</div>' : ''}
                     ${attachmentsHtml}
-                    <div>${escapeHtml(content)}</div>
+                    <div class="user-prompt-text ${isLong ? 'is-collapsed' : ''}">${escapeHtml(content)}</div>
+                    ${isLong ? `
+                        <button type="button" class="user-prompt-expand-btn" title="Click to show full prompt">
+                            <span class="expand-label">Show more</span>
+                            <svg class="expand-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    ` : ''}
                 </div>
                 <div class="user-avatar">👤</div>
                 <div class="message-actions-bar">
@@ -4092,6 +4115,42 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                     <button type="button" class="msg-action-btn delete delete-msg-btn" title="Delete Message">🗑️</button>
                 </div>
             `;
+
+            if (isLong) {
+                const expandBtn = msgWrap.querySelector('.user-prompt-expand-btn');
+                const promptTextEl = msgWrap.querySelector('.user-prompt-text');
+                
+                const toggleExpand = (e) => {
+                    if (e) e.stopPropagation();
+                    const isCurrentlyCollapsed = promptTextEl.classList.contains('is-collapsed');
+                    if (isCurrentlyCollapsed) {
+                        promptTextEl.classList.remove('is-collapsed');
+                        promptTextEl.classList.add('is-expanded');
+                        if (expandBtn) {
+                            expandBtn.querySelector('.expand-label').textContent = 'Show less';
+                            const icon = expandBtn.querySelector('.expand-icon');
+                            if (icon) icon.style.transform = 'rotate(180deg)';
+                        }
+                    } else {
+                        promptTextEl.classList.add('is-collapsed');
+                        promptTextEl.classList.remove('is-expanded');
+                        if (expandBtn) {
+                            expandBtn.querySelector('.expand-label').textContent = 'Show more';
+                            const icon = expandBtn.querySelector('.expand-icon');
+                            if (icon) icon.style.transform = 'rotate(0deg)';
+                        }
+                    }
+                };
+
+                if (expandBtn) expandBtn.addEventListener('click', toggleExpand);
+                if (promptTextEl) {
+                    promptTextEl.addEventListener('click', (e) => {
+                        if (promptTextEl.classList.contains('is-collapsed')) {
+                            toggleExpand(e);
+                        }
+                    });
+                }
+            }
         }
         messagesList.appendChild(msgWrap);
         bindMessageActions(msgWrap, id);

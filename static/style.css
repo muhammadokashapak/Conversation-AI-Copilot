@@ -1076,7 +1076,59 @@ body {
     line-height: 1.55;
     word-break: break-word;
     border: 1px solid var(--border-subtle);
+    position: relative;
 }
+
+.user-prompt-text {
+    font-size: 14.5px;
+    line-height: 1.55;
+    word-break: break-word;
+    white-space: pre-wrap;
+    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.user-prompt-text.is-collapsed {
+    max-height: 68px; /* ~3 lines of text */
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+}
+
+.user-prompt-text.is-expanded {
+    max-height: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+    cursor: default;
+}
+
+.user-prompt-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 3px 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    border-radius: 12px;
+    color: var(--primary-color, #10b981);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.user-prompt-expand-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    border-color: var(--primary-color, #10b981);
+}
+
+.user-prompt-expand-btn .expand-icon {
+    transition: transform 0.2s ease;
+}
+
 
 .user-avatar {
     width: 32px;
