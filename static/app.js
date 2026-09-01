@@ -163,9 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (queueCancelBtn) queueCancelBtn.addEventListener('click', clearPromptQueue);
 
     const sidebarProfileCard = document.getElementById('sidebar-profile-card');
-    const sidebarConnectGhl = document.getElementById('sidebar-connect-ghl');
-    const sidebarLocationName = document.getElementById('sidebar-location-name');
-    const sidebarLocationId = document.getElementById('sidebar-location-id');
+    const sidebarConnectGhl = sidebarConnectGhlBtn;
+
 
     let ghlConfig = {
         locationId: localStorage.getItem('ghl_location_id') || '',
@@ -1159,6 +1158,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createNewThread(shouldFocus = true) {
+        abortCurrentGeneration();
         clearPromptQueue();
         currentThreadId = 'thread_' + Date.now();
         localStorage.setItem('ghl_active_thread_id', currentThreadId);
@@ -1172,6 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             userInput.style.height = 'auto';
             if (shouldFocus) userInput.focus();
         }
+        updateSendButtonState();
         renderRecentChatsList();
     }
 
@@ -1186,6 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
             icon: '🧹',
             confirmText: 'Clear Messages',
             onConfirm: () => {
+                abortCurrentGeneration();
                 clearPromptQueue();
                 let thread = getThreadById(currentThreadId);
                 if (thread) {
@@ -1194,6 +1196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 messagesList.innerHTML = '';
                 if (welcomeScreen) welcomeScreen.classList.remove('hidden');
+                updateSendButtonState();
                 renderRecentChatsList();
             }
         });
@@ -1212,6 +1215,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadThread(threadId) {
+        abortCurrentGeneration();
         clearPromptQueue();
         const thread = getThreadById(threadId);
         if (!thread) return;
@@ -1234,6 +1238,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+
+        updateSendButtonState();
+
 
         renderRecentChatsList();
         scrollToBottom();
@@ -1451,9 +1458,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (doneUsageModalBtn) doneUsageModalBtn.addEventListener('click', closeUsageModal);
 
     async function openUsageModal() {
+        if (usageModal) usageModal.classList.remove('hidden');
         await fetchModelsCatalog();
         renderUsageModalGrid();
-        if (usageModal) usageModal.classList.remove('hidden');
     }
 
     function closeUsageModal() {
