@@ -965,16 +965,18 @@ You MUST deliver all 4 sections in this exact order:
                             accumulated_text += chunk.text
                             yield {"type": "chunk", "text": chunk.text}
 
-                    # Auto-continuation for Gemini if output was truncated mid-sentence/code-fence
-                    if stream_started and detect_truncation(accumulated_text):
-                        logger.info(f"Gemini output truncated. Auto-triggering seamless continuation...")
+                    # Multi-Pass Seamless Auto-Continuation for Gemini
+                    max_gemini_cont = 3
+                    while stream_started and detect_truncation(accumulated_text) and max_gemini_cont > 0:
+                        max_gemini_cont -= 1
+                        logger.info(f"Gemini output truncated (len={len(accumulated_text)}). Auto-triggering seamless continuation {3 - max_gemini_cont}/3...")
                         try:
                             recent_tail = accumulated_text[-1800:]
                             last_cutoff = accumulated_text[-60:].replace('\n', ' ')
                             cont_contents = [
                                 types.Content(role="user", parts=[types.Part.from_text(text=prompt)]),
                                 types.Content(role="model", parts=[types.Part.from_text(text=f"...{recent_tail}")]),
-                                types.Content(role="user", parts=[types.Part.from_text(text=f"Your response was cut off at: '{last_cutoff}'. Continue generating the remaining code and text EXACTLY from that point without repeating anything. Complete all remaining steps and close all tags cleanly.")])
+                                types.Content(role="user", parts=[types.Part.from_text(text=f"Your response was cut off at: '{last_cutoff}'. Continue generating the remaining code and text EXACTLY from that point without repeating previous text. Complete all remaining sections, close all HTML tags, and finish completely.")])
                             ]
                             cont_stream = current_client.models.generate_content_stream(
                                 model=mod,
@@ -986,7 +988,16 @@ You MUST deliver all 4 sections in this exact order:
                                     accumulated_text += c_chunk.text
                                     yield {"type": "chunk", "text": c_chunk.text}
                         except Exception as e_cont:
-                            logger.warning(f"Gemini auto-continuation failed: {e_cont}")
+                            logger.warning(f"Gemini auto-continuation error on key {active_gemini_key[:8]}: {e_cont}")
+                            # Rotate key in pool if 429 occurs during continuation
+                            if "429" in str(e_cont) or "RESOURCE_EXHAUSTED" in str(e_cont):
+                                gemini_key_pool.mark_key_depleted(active_gemini_key, 429, str(e_cont))
+                                next_k = gemini_key_pool.get_active_key()
+                                if next_k and next_k != active_gemini_key:
+                                    active_gemini_key = next_k
+                                    current_client = genai.Client(api_key=active_gemini_key)
+                                    continue
+                            break
 
                     if accumulated_text.count('```') % 2 != 0:
                         yield {"type": "chunk", "text": "\n```\n"}
@@ -1345,7 +1356,7 @@ You MUST deliver all 4 sections in this exact order:
                                 pass
 
                 # Auto-Continuation loop if stream cut off (finish_reason == "length" or unclosed code fence)
-                max_continuations = 2
+                max_continuations = 3
                 while (finish_reason == "length" or detect_truncation(accumulated_text)) and max_continuations > 0:
                     max_continuations -= 1
                     logger.info(f"Auto-continuation triggered for {provider_name} (finish_reason={finish_reason}, len={len(accumulated_text)})")
@@ -1356,7 +1367,7 @@ You MUST deliver all 4 sections in this exact order:
                         {"role": "assistant", "content": f"...{recent_tail}"},
                         {
                             "role": "user",
-                            "content": f"Your response was cut off at: '{last_cutoff}'. Continue generating the remaining code and text EXACTLY from that point without repeating previous text. Complete all remaining sections and close all tags cleanly."
+                            "content": f"Your response was cut off at: '{last_cutoff}'. Continue generating the remaining code and text EXACTLY from that point without repeating previous text. Complete all remaining sections, close all HTML tags, and finish completely."
                         }
                     ]
                     cont_payload = {
@@ -1370,6 +1381,7 @@ You MUST deliver all 4 sections in this exact order:
                         cont_resp = requests.post(api_url, headers=headers, json=cont_payload, stream=True, timeout=45)
                         if cont_resp.status_code == 200:
                             finish_reason = None
+                            is_first_chunk = True
                             for c_line in cont_resp.iter_lines():
                                 if c_line:
                                     c_str = c_line.decode('utf-8', errors='replace')
@@ -1385,6 +1397,12 @@ You MUST deliver all 4 sections in this exact order:
                                             if c_choice.get('finish_reason'):
                                                 finish_reason = c_choice.get('finish_reason')
                                             if c_text:
+                                                if is_first_chunk:
+                                                    is_first_chunk = False
+                                                    if c_text.startswith("```html\n"):
+                                                        c_text = c_text[8:]
+                                                    elif c_text.startswith("```\n"):
+                                                        c_text = c_text[4:]
                                                 accumulated_text += c_text
                                                 yield {"type": "chunk", "text": c_text}
                                         except Exception:
