@@ -84,7 +84,9 @@ _FULL_BUILD_KEYWORDS = {
     'brand customization:', 'connected automations:', 'custom wizard specifications:',
     'html/css', 'html and css', 'provide the html', 'checkout html', 'funnel architecture',
     'deep improvement', 'code review', 'implementation review', 'production ready code',
-    'production-ready', 'review the uploaded', 'architectural review', 'vsl funnel',
+    'production-ready', 'review the uploaded', 'architectural review', 'vsl funnel'
+}
+
 _DIRECT_ASSET_PATTERNS = re.compile(
     r'^(create|build|add|make|set\s*up|configure)\s+(a\s+)?(pipeline|tag|contact|custom\s+field|opportunity|stage)\b',
     re.IGNORECASE
