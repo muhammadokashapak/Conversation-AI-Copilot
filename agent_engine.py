@@ -147,18 +147,10 @@ def format_friendly_error_banner(reason: str = "") -> str:
 
 # Per-model actual output token ceilings (verified from provider docs)
 MODEL_OUTPUT_CAPS = {
-    'groq/compound-mini': 4096,
-    'groq/compound': 4096,
-    'qwen/qwen3.8-27b': 4096,
-    'qwen/qwen3.6-27b': 4096,
-    'openai/gpt-oss-120b': 4096,
-    'openai/gpt-oss-20b': 4096,
-    'allam-2-7b': 4096,
     'gemini-3.6-flash': 8192,
     'gemini-3.7-flash': 8192,
-    'gemini-3.5-flash': 8192,
-    'gemini-flash-latest': 8192,
-    'rapidapi-chatgpt': 2048,
+    'groq/compound-mini': 4096,
+    'qwen/qwen3.8-27b': 4096,
 }
 
 def get_token_budget(provider: str, intent: str, model_name: str = '') -> int:
@@ -298,7 +290,7 @@ def detect_truncation(text: str) -> bool:
 
     return False
 
-# AI Models Catalog categorized by Provider
+# AI Models Catalog categorized by Provider (Top 4 Clean High-Performance Models)
 MODELS_CATALOG = [
     # Google Gemini Models (Active Key Pool)
     {
@@ -306,39 +298,21 @@ MODELS_CATALOG = [
         "name": "Gemini 3.6 Flash (Recommended)",
         "provider": "gemini",
         "category": "Google Gemini",
-        "badge": "✨ Multimodal & Tools",
+        "badge": "✨ 1M TPM • Tools",
         "supports_tools": True,
-        "description": "Latest state-of-the-art multimodal Gemini model with native GHL function calling and high speed."
+        "description": "State-of-the-art multimodal Gemini model with native GHL function calling and ultra high speed."
     },
     {
         "id": "gemini-3.7-flash",
         "name": "Gemini 3.7 Flash",
         "provider": "gemini",
         "category": "Google Gemini",
-        "badge": "Advanced Reasoning",
+        "badge": "🧠 Advanced Reasoning",
         "supports_tools": True,
         "description": "Hybrid reasoning model for high precision CRM workflows and complex multi-step automations."
     },
-    {
-        "id": "gemini-3.5-flash",
-        "name": "Gemini 3.5 Flash",
-        "provider": "gemini",
-        "category": "Google Gemini",
-        "badge": "High Speed",
-        "supports_tools": True,
-        "description": "Optimized for quick turnaround CRM tasks and automated workflows."
-    },
-    {
-        "id": "gemini-flash-latest",
-        "name": "Gemini Flash Latest",
-        "provider": "gemini",
-        "category": "Google Gemini",
-        "badge": "High Speed",
-        "supports_tools": True,
-        "description": "Latest general-purpose Gemini Flash model."
-    },
 
-    # Groq Cloud Ultra-Fast Models
+    # Groq Cloud Ultra-Fast LPUs
     {
         "id": "groq/compound-mini",
         "name": "Groq Compound Mini",
@@ -349,69 +323,13 @@ MODELS_CATALOG = [
         "description": "High-throughput Groq Compound model with ~70k TPM capacity for massive multi-step funnels."
     },
     {
-        "id": "groq/compound",
-        "name": "Groq Compound Flagship",
-        "provider": "groq",
-        "category": "Groq Ultra-Fast",
-        "badge": "🧠 Flagship Reasoning",
-        "supports_tools": True,
-        "description": "Full-capacity Groq Compound architecture for deep architectural logic."
-    },
-    {
         "id": "qwen/qwen3.8-27b",
         "name": "Groq Qwen 3.8 27B",
         "provider": "groq",
         "category": "Groq Ultra-Fast",
-        "badge": "High Speed",
+        "badge": "⚡ Low Latency LPU",
         "supports_tools": True,
-        "description": "Lightning-fast execution on Groq LPU with full GHL function calling."
-    },
-    {
-        "id": "qwen/qwen3.6-27b",
-        "name": "Groq Qwen 3.6 27B",
-        "provider": "groq",
-        "category": "Groq Ultra-Fast",
-        "badge": "Low Latency",
-        "supports_tools": True,
-        "description": "High-throughput model tuned for real-time CRM chat."
-    },
-    {
-        "id": "openai/gpt-oss-120b",
-        "name": "Groq GPT-OSS 120B",
-        "provider": "groq",
-        "category": "Groq Ultra-Fast",
-        "badge": "High Capacity",
-        "supports_tools": True,
-        "description": "Large-scale reasoning model hosted on Groq LPU."
-    },
-    {
-        "id": "openai/gpt-oss-20b",
-        "name": "Groq GPT-OSS 20B",
-        "provider": "groq",
-        "category": "Groq Ultra-Fast",
-        "badge": "Fast Inference",
-        "supports_tools": True,
-        "description": "Compact foundation model hosted on Groq."
-    },
-    {
-        "id": "allam-2-7b",
-        "name": "Groq Allam 2 7B",
-        "provider": "groq",
-        "category": "Groq Ultra-Fast",
-        "badge": "Bilingual",
-        "supports_tools": False,
-        "description": "Fast conversational engine with Arabic & English multilingual support."
-    },
-
-    # RapidAPI Free ChatGPT Gateway
-    {
-        "id": "rapidapi-chatgpt",
-        "name": "RapidAPI Free ChatGPT",
-        "provider": "rapidapi",
-        "category": "RapidAPI Free",
-        "badge": "⚡ RapidAPI",
-        "supports_tools": False,
-        "description": "Free ChatGPT API gateway hosted via RapidAPI marketplace."
+        "description": "Lightning-fast open-weights execution on Groq LPU with full GHL function calling."
     }
 ]
 

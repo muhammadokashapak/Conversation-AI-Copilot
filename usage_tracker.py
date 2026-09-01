@@ -21,27 +21,9 @@ MODEL_SPECS: Dict[str, Dict[str, Any]] = {
         "rpd_limit": 1000,
         "badge_capacity": "1M TPM • 15 RPM"
     },
-    "gemini-3.5-flash": {
-        "tpm_limit": 1000000,
-        "rpm_limit": 15,
-        "rpd_limit": 1500,
-        "badge_capacity": "1M TPM • 15 RPM"
-    },
-    "gemini-flash-latest": {
-        "tpm_limit": 1000000,
-        "rpm_limit": 15,
-        "rpd_limit": 1500,
-        "badge_capacity": "1M TPM • 15 RPM"
-    },
 
     # Groq Cloud Ultra-Fast Models
     "groq/compound-mini": {
-        "tpm_limit": 70000,
-        "rpm_limit": 30,
-        "rpd_limit": 14400,
-        "badge_capacity": "70k TPM • 30 RPM"
-    },
-    "groq/compound": {
         "tpm_limit": 70000,
         "rpm_limit": 30,
         "rpd_limit": 14400,
@@ -52,38 +34,6 @@ MODEL_SPECS: Dict[str, Dict[str, Any]] = {
         "rpm_limit": 30,
         "rpd_limit": 14400,
         "badge_capacity": "8k TPM • 30 RPM"
-    },
-    "qwen/qwen3.6-27b": {
-        "tpm_limit": 8000,
-        "rpm_limit": 30,
-        "rpd_limit": 14400,
-        "badge_capacity": "8k TPM • 30 RPM"
-    },
-    "openai/gpt-oss-120b": {
-        "tpm_limit": 8000,
-        "rpm_limit": 30,
-        "rpd_limit": 14400,
-        "badge_capacity": "8k TPM • 30 RPM"
-    },
-    "openai/gpt-oss-20b": {
-        "tpm_limit": 8000,
-        "rpm_limit": 30,
-        "rpd_limit": 14400,
-        "badge_capacity": "8k TPM • 30 RPM"
-    },
-    "allam-2-7b": {
-        "tpm_limit": 8000,
-        "rpm_limit": 30,
-        "rpd_limit": 14400,
-        "badge_capacity": "8k TPM • 30 RPM"
-    },
-
-    # RapidAPI Free ChatGPT Gateway
-    "rapidapi-chatgpt": {
-        "tpm_limit": 10000,
-        "rpm_limit": 10,
-        "rpd_limit": 100,
-        "badge_capacity": "10k TPM • 10 RPM"
     }
 }
 

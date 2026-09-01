@@ -42,6 +42,8 @@ venv.bak/
 Thumbs.db
 
 model_usage.json
+model_usage.json.bak
+*.bak
 *.sqlite3
 *.db
 *.bin
