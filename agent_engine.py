@@ -1237,11 +1237,13 @@ You MUST deliver all 4 sections in this exact order:
         if any(kw in prompt.lower() for kw in ['html', 'css', 'code', 'checkout', 'funnel', 'landing page', 'page', 'form']):
             messages[0]["content"] += (
                 "\n\n=============================================================================\n"
-                "CRITICAL CODE ARTIFACT MANDATE:\n"
-                "You MUST output the complete, 100% production-ready ```html <!DOCTYPE html> ... </html>``` code block "
-                "containing ALL 5 steps (Opt-in, VSL, Checkout, Upsell, Thank You) and interactive JavaScript navigation. "
-                "Use Tailwind CDN utilities (<script src=\"https://cdn.tailwindcss.com\"></script>) directly on elements. "
-                "NEVER omit, truncate, or summarize the HTML code block."
+                "CRITICAL SINGLE-FILE APPLICATION MANDATE:\n"
+                "You MUST output ONE complete, 100% production-ready ```html <!DOCTYPE html> ... </html>``` code block "
+                "containing ALL 5 steps inside this single file (#step-optin, #step-vsl, #step-checkout, #step-upsell, #step-thankyou) "
+                "with interactive JavaScript tab navigation.\n"
+                "DO NOT split into 5 separate boilerplate HTML files with duplicate <!DOCTYPE html> headers. "
+                "Use Tailwind CDN utilities (<script src=\"https://cdn.tailwindcss.com\"></script>) directly on elements without manual CSS stylesheets. "
+                "Guarantee the code completes 100% from <!DOCTYPE html> down to </html>."
             )
 
         # Compress conversation history intelligently
