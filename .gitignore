@@ -44,4 +44,6 @@ Thumbs.db
 model_usage.json
 *.sqlite3
 *.db
+*.bin
+*.pickle
 
