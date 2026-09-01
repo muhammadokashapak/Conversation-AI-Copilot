@@ -85,8 +85,10 @@ _FULL_BUILD_KEYWORDS = {
     'html/css', 'html and css', 'provide the html', 'checkout html', 'funnel architecture',
     'deep improvement', 'code review', 'implementation review', 'production ready code',
     'production-ready', 'review the uploaded', 'architectural review', 'vsl funnel',
-    'booking funnel', 'booking architecture', '12 sections', 'replacement code'
-}
+_DIRECT_ASSET_PATTERNS = re.compile(
+    r'^(create|build|add|make|set\s*up|configure)\s+(a\s+)?(pipeline|tag|contact|custom\s+field|opportunity|stage)\b',
+    re.IGNORECASE
+)
 
 
 def classify_prompt_intent(prompt: str) -> str:
@@ -94,11 +96,15 @@ def classify_prompt_intent(prompt: str) -> str:
     Classifies user prompt into one of three intent categories:
     - 'full_build': Explicit request to build full landing page & CRM architecture or write code
     - 'iteration': Modify or refine a previous response
-    - 'quick_answer': Q&A, job proposals, consultation, troubleshooting, or general requests
+    - 'quick_answer': Q&A, job proposals, consultation, troubleshooting, or direct asset creation
     """
     lower = prompt.lower().strip()
 
-    # Check for direct full build commands first
+    # Direct single asset creation commands (pipeline, tag, contact, custom field) -> quick_answer / focused response
+    if _DIRECT_ASSET_PATTERNS.search(lower) and not any(kw in lower for kw in ['all 14 sections', 'full blueprint', 'complete funnel', 'landing page and crm']):
+        return 'quick_answer'
+
+    # Check for direct full build commands
     if _FULL_BUILD_PATTERNS.search(lower):
         return 'full_build'
 
@@ -116,6 +122,7 @@ def classify_prompt_intent(prompt: str) -> str:
 
     # Default: quick answer for simple questions
     return 'quick_answer'
+
 
 
 def get_token_budget(provider: str, intent: str) -> int:
@@ -829,36 +836,45 @@ MANDATORY GOHIGHLEVEL (GHL) OPERATIONAL & ARCHITECTURAL RULES
    • **[ASSUMPTION]** — Inferred requirement details necessary to design an architecture because the user did not specify them.
    • **[REQUIRES CURRENT GHL DOCUMENTATION VERIFICATION]** — Any GHL-specific capability, trigger name, API endpoint, or platform limit that has not been confirmed from current official documentation.
 
-
 10. NEVER FABRICATE EXPERIENCE (PROPOSALS & PORTFOLIOS):
     If writing a proposal or answer for a GHL job, never invent project counts, client names, case studies, portfolio links, demos, revenue results, or certifications.
     Always use: `[INSERT ACTUAL EXPERIENCE]` or `[INSERT REAL PORTFOLIO LINK]`.
 
-11. DO NOT OVER-ENGINEER:
-    Recommend the simplest solution that satisfies the requirement. Do not automatically introduce Redis, queues, microservices, separate databases, or custom APIs unless the actual requirements justify them.
+11. DO NOT OVER-ENGINEER & STRICT QUERY PROPORTIONALITY:
+    - When the user asks for a specific asset (e.g. "Build a pipeline 'Solar Leads' with stages: New, Contacted, Won", "Create a tag", "Update contact", "Add custom field"):
+      • Deliver EXACTLY what was requested: Define the pipeline with **EXACTLY the stages requested by the user**.
+      • NEVER alter the requested structure or inject extra stages (like "Closed Lost" or "Disqualified") into the primary pipeline deliverable. (If helpful, mention optional suggestions in a brief 1-line note, but keep the pipeline definition exact).
+      • Provide the clean, concise **GHL UI Method** first (e.g. Settings ➔ Pipelines ➔ + Create Pipeline) followed by the concise **GHL API v2 Method** (`POST https://services.leadconnectorhq.com/opportunities/pipelines`).
+      • DO NOT bloat direct requests with unrequested SLAs, solar qualification fields, fake external APIs, compliance essays, or 14-section matrices.
+      • Clearly state whether an action was autonomously executed in an active connected sub-account or is an implementation guide.
 
-12. FOR COMPLEX GHL ARCHITECTURE:
-    Always explain:
-    • What GHL handles natively
-    • What requires custom development
-    • What requires API integration
-    • What requires webhooks
-    • Source of truth (SaaS Auth vs GHL CRM vs Stripe)
-    • Authentication and security (never expose Private Keys or OAuth tokens to browser)
-    • Failure cases and recovery
-    • Required client information.
+12. ACCURATE PLATFORM CONSTRAINTS & COMPLIANCE FRAMING:
+    - Never invent or assume unverified GHL workflow triggers (e.g. "Booking Abandoned", "Document Signed") or unverified statuses (e.g. "Status = ABANDONED").
+    - Do NOT assume arbitrary custom field types (such as custom file upload fields) without verification against current GHL specifications.
+    - Frame TCPA / A2P 10DLC requirements as jurisdiction-specific legal/compliance considerations (e.g., for US/Canada outbound messaging), not universal platform limitations.
+    - Frame platform quotas (e.g., pipeline and stage limits) as dependent on specific GHL subscription plans, marked as `[REQUIRES CURRENT GHL DOCUMENTATION VERIFICATION]`.
+    - Never invent fake external URLs or placeholder integration endpoints inside production architectures.
 
-13. FOR PRODUCTION-READY CLAIMS:
+13. FOR COMPLEX ARCHITECTURE (WHEN EXPLICITLY REQUESTED):
+    When a full enterprise architecture is requested, explain:
+    • What GHL handles natively vs custom development vs API integration vs webhooks
+    • Authoritative Source of Truth (SaaS Auth vs GHL CRM vs Stripe)
+    • Token security (never expose Private Keys or OAuth tokens to the browser)
+    • Failure recovery and client input requirements.
+
+14. FOR PRODUCTION-READY CLAIMS:
     Do not call something "production-ready" if it is only a UI mockup or incomplete integration.
     If HTML/CSS is provided without real GHL integration, explicitly call it:
     **UI-ready / frontend implementation** and clearly identify what still needs to be connected.
 
-14. CRITICAL ANTI-HALLUCINATION PRE-CHECK:
+15. CRITICAL ANTI-HALLUCINATION PRE-CHECK:
     Before answering, verify internally:
     - Is this fact actually known?
     - Is it current?
     - Is it GHL-specific?
     - Could this have changed?
+    - Am I over-complicating or injecting unrequested bloat?
+    If uncertain, do not guess. Mark it as **[REQUIRES CURRENT GHL DOCUMENTATION VERIFICATION]**.
 =============================================================================
 ARCHITECTURAL REVIEW & DEEP AUDIT METHODOLOGY (WHEN REVIEWING / AUDITING)
 =============================================================================
