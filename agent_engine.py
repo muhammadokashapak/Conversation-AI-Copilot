@@ -153,22 +153,22 @@ def get_token_budget(provider: str, intent: str) -> int:
     """
     budgets = {
         'gemini': {
-            'full_build': 12000,
-            'iteration': 8000,
-            'quick_answer': 6000,
+            'full_build': 16000,
+            'iteration': 10000,
+            'quick_answer': 8000,
         },
         'groq': {
-            'full_build': 4000,
-            'iteration': 3000,
-            'quick_answer': 2500,
+            'full_build': 8192,
+            'iteration': 6000,
+            'quick_answer': 4000,
         },
         'openrouter': {
-            'full_build': 1800,
-            'iteration': 1200,
-            'quick_answer': 1000,
+            'full_build': 4000,
+            'iteration': 2500,
+            'quick_answer': 1500,
         }
     }
-    return budgets.get(provider, budgets['openrouter']).get(intent, 1000)
+    return budgets.get(provider, budgets['openrouter']).get(intent, 1500)
 
 
 def get_temperature(intent: str, is_tool_mode: bool = False) -> float:
@@ -930,7 +930,9 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
         is_fallback: bool = False,
         attachments: Optional[List[Dict[str, Any]]] = None
     ) -> Generator[Dict[str, Any], None, None]:
-        if not self.gemini_client:
+        from key_pool_manager import gemini_key_pool
+        active_gemini_key = gemini_key_pool.get_active_key() or self.gemini_key
+        if not active_gemini_key:
             yield {"type": "chunk", "text": "⚠️ **Error:** Gemini API Key is not configured on server."}
             return
 
@@ -975,6 +977,9 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
         if not is_ghl_connected:
             stream_started = False
             last_err_text = ""
+            accumulated_text = ""
+            current_client = genai.Client(api_key=active_gemini_key)
+
             for mod in candidate_models:
                 try:
                     config_args = {
@@ -988,7 +993,7 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                         except Exception:
                             pass
 
-                    response_stream = self.gemini_client.models.generate_content_stream(
+                    response_stream = current_client.models.generate_content_stream(
                         model=mod,
                         contents=contents,
                         config=types.GenerateContentConfig(**config_args)
@@ -996,14 +1001,43 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                     for chunk in response_stream:
                         if chunk.text:
                             stream_started = True
+                            accumulated_text += chunk.text
                             yield {"type": "chunk", "text": chunk.text}
+
+                    # Auto-continuation for Gemini if output was truncated mid-sentence/code-fence
+                    if stream_started and detect_truncation(accumulated_text):
+                        logger.info(f"Gemini output truncated. Auto-triggering seamless continuation...")
+                        try:
+                            cont_contents = list(contents)
+                            cont_contents.append(types.Content(role="model", parts=[types.Part.from_text(text=accumulated_text)]))
+                            cont_contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Continue generating the output EXACTLY from where you left off. Do not repeat previous text or code blocks. Resume immediately from the exact last character.")]))
+                            cont_stream = current_client.models.generate_content_stream(
+                                model=mod,
+                                contents=cont_contents,
+                                config=types.GenerateContentConfig(**config_args)
+                            )
+                            for c_chunk in cont_stream:
+                                if c_chunk.text:
+                                    accumulated_text += c_chunk.text
+                                    yield {"type": "chunk", "text": c_chunk.text}
+                        except Exception as e_cont:
+                            logger.warning(f"Gemini auto-continuation failed: {e_cont}")
+
+                    gemini_key_pool.record_success(active_gemini_key)
+                    return
                 except Exception as e_mod:
                     if stream_started:
                         return
                     last_err_text = str(e_mod)
-                    logger.warning(f"Gemini streaming with {mod} failed: {e_mod}")
+                    logger.warning(f"Gemini streaming with {mod} on key {active_gemini_key[:8]} failed: {e_mod}")
                     if "429" in last_err_text or "RESOURCE_EXHAUSTED" in last_err_text or "quota" in last_err_text.lower():
-                        # Gemini daily/minute quota exhausted; failover immediately to OpenRouter / Groq
+                        gemini_key_pool.mark_key_depleted(active_gemini_key, 429, last_err_text)
+                        next_gemini_key = gemini_key_pool.get_active_key()
+                        if next_gemini_key and next_gemini_key != active_gemini_key:
+                            logger.info(f"Shifting Gemini key pool to next key: {next_gemini_key[:8]}...")
+                            active_gemini_key = next_gemini_key
+                            current_client = genai.Client(api_key=active_gemini_key)
+                            continue
                         break
                     if "pro" in mod.lower() or "3.7" in mod.lower():
                         continue
@@ -1380,22 +1414,75 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                 openrouter_key_pool.record_success(active_key)
 
             if not can_call_tools:
-                # Direct streaming from OpenRouter / Groq SSE stream
+                # Direct streaming from OpenRouter / Groq SSE stream with Auto-Continuation
+                accumulated_text = ""
+                finish_reason = None
                 for raw_line in resp.iter_lines():
                     if raw_line:
-                        line_str = raw_line.decode('utf-8')
+                        line_str = raw_line.decode('utf-8', errors='replace')
                         if line_str.startswith('data: '):
                             payload_str = line_str[6:].strip()
                             if payload_str == '[DONE]':
                                 break
                             try:
                                 chunk_data = json.loads(payload_str)
-                                delta = chunk_data.get('choices', [{}])[0].get('delta', {})
+                                choice = chunk_data.get('choices', [{}])[0]
+                                delta = choice.get('delta', {})
                                 content_piece = delta.get('content', '')
+                                if choice.get('finish_reason'):
+                                    finish_reason = choice.get('finish_reason')
                                 if content_piece:
+                                    accumulated_text += content_piece
                                     yield {"type": "chunk", "text": content_piece}
                             except Exception:
                                 pass
+
+                # Auto-Continuation loop if stream cut off (finish_reason == "length" or unclosed code fence)
+                max_continuations = 2
+                while (finish_reason == "length" or detect_truncation(accumulated_text)) and max_continuations > 0:
+                    max_continuations -= 1
+                    logger.info(f"Auto-continuation triggered for {provider_name} (finish_reason={finish_reason}, len={len(accumulated_text)})")
+                    cont_messages = list(messages)
+                    cont_messages.append({"role": "assistant", "content": accumulated_text})
+                    cont_messages.append({
+                        "role": "user",
+                        "content": "Continue generating the output EXACTLY from where you left off. Do not repeat previous text or code blocks. Resume immediately from the exact last character."
+                    })
+                    cont_payload = {
+                        "model": model_name,
+                        "messages": cont_messages,
+                        "temperature": target_temp,
+                        "max_tokens": target_max_tokens,
+                        "stream": True
+                    }
+                    try:
+                        cont_resp = requests.post(api_url, headers=headers, json=cont_payload, stream=True, timeout=45)
+                        if cont_resp.status_code == 200:
+                            finish_reason = None
+                            for c_line in cont_resp.iter_lines():
+                                if c_line:
+                                    c_str = c_line.decode('utf-8', errors='replace')
+                                    if c_str.startswith('data: '):
+                                        c_payload = c_str[6:].strip()
+                                        if c_payload == '[DONE]':
+                                            break
+                                        try:
+                                            c_data = json.loads(c_payload)
+                                            c_choice = c_data.get('choices', [{}])[0]
+                                            c_delta = c_choice.get('delta', {})
+                                            c_text = c_delta.get('content', '')
+                                            if c_choice.get('finish_reason'):
+                                                finish_reason = c_choice.get('finish_reason')
+                                            if c_text:
+                                                accumulated_text += c_text
+                                                yield {"type": "chunk", "text": c_text}
+                                        except Exception:
+                                            pass
+                        else:
+                            break
+                    except Exception as e_cont:
+                        logger.warning(f"Continuation request failed: {e_cont}")
+                        break
                 return
 
             data = resp.json()

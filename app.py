@@ -31,13 +31,14 @@ if os.path.exists(ENV_PATH):
 from ghl_client import GHLSubAccountClient
 from agent_engine import GHLAgentExecutionEngine, MODELS_CATALOG, format_friendly_error_banner
 from usage_tracker import usage_tracker
-from key_pool_manager import openrouter_key_pool
+from key_pool_manager import openrouter_key_pool, gemini_key_pool
 
 def get_server_keys() -> Dict[str, str]:
     """Load API keys for Gemini, Groq, and active OpenRouter key from the dynamic pool."""
     active_or_key = openrouter_key_pool.get_active_key() or os.getenv("OPENROUTER_API_KEY", "").strip()
+    active_gemini_key = gemini_key_pool.get_active_key() or os.getenv("GEMINI_API_KEY", "").strip()
     return {
-        "gemini": os.getenv("GEMINI_API_KEY", "").strip(),
+        "gemini": active_gemini_key,
         "groq": os.getenv("GROQ_API_KEY", "").strip(),
         "openrouter": active_or_key
     }
