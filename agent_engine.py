@@ -910,9 +910,16 @@ TASK DIRECTIVE: ITERATIVE MODIFICATION & REFINEMENT
 TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 =============================================================================
 - Output the complete, enterprise-grade architecture with executive formatting.
-- Structure the delivery clearly: 1. Funnel Routing Map, 2. HighLevel Pipeline & Custom Fields/Tags, 3. Drop-off Recovery Workflows, 4. Full Production Single-File HTML/CSS/JS Application.
-- Write modern, high-density, production-ready HTML/CSS/JS that delivers all 5 steps (Opt-in, VSL, Checkout, Upsell, Thank You) with responsive layout, clean utility styles, and interactive JavaScript.
-- Maintain efficient code density so the entire architecture and complete application code finish in 100% full completeness from `<!DOCTYPE html>` to `</html>` without truncation or cut-offs.
+- Structure the delivery into 4 crisp, high-impact sections:
+  1. 🗺️ Funnel Step Map & URLs (Markdown Table)
+  2. 📊 HighLevel Pipeline Stages, Custom Fields & Tags (Compact Markdown Tables)
+  3. ⚡ Connected Drop-off Recovery Workflows (Crisp Action Blocks)
+  4. 🚀 Complete Single-File Interactive HTML/CSS/JS Funnel Application (````html <!DOCTYPE html> ... </html> ````)
+- For the HTML/CSS/JS Application (Section 4):
+  • Use Tailwind CSS CDN (`<script src="https://cdn.tailwindcss.com"></script>`) with compact custom neon accent styles.
+  • NEVER write hundreds of lines of repetitive manual CSS that drains token budgets.
+  • Deliver ALL 5 STEPS (1. Opt-in, 2. VSL with 80% unlock, 3. 2-Step Checkout, 4. Upsell OTO, 5. Thank You) and the complete interactive `<script>` logic in the single code block.
+  • Guarantee the code completes 100% from `<!DOCTYPE html>` down to `</html>``` ` without getting cut off midway.
 - DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
 {tool_block}
 """
