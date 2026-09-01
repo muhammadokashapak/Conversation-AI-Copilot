@@ -1093,40 +1093,13 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
         messages.append({"role": "user", "content": augmented_prompt})
 
         # Adaptive token budget and temperature
-        target_max_tokens = get_token_budget(provider_slug, intent)
+        target_max_tokens = get_token_budget("groq", intent)
         target_temp = get_temperature(intent, is_tool_mode=is_ghl_connected)
 
-        # Groq TPM Safety Guardrail
-        if provider_slug == "groq":
-            if model_name not in ["qwen/qwen3.8-27b", "qwen/qwen3.6-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "allam-2-7b", "groq/compound"]:
-                model_name = "qwen/qwen3.8-27b"
-
-            est_prompt_tokens = sum(len(m.get("content", "")) // 4 for m in messages)
-            if est_prompt_tokens > 5000 and not is_fallback:
-                from key_pool_manager import openrouter_key_pool
-                pool_key = openrouter_key_pool.get_active_key()
-                if pool_key:
-                    logger.info("Prompt exceeds Groq window. Seamlessly routing to OpenRouter...")
-                    yield {
-                        "type": "chunk",
-                        "text": "> ℹ️ **Notice:** High-volume request. Seamlessly routing to **OpenRouter** (Llama 3.3 70B)...\n\n---\n\n"
-                    }
-                    yield from self._execute_openai_compatible(
-                        prompt=prompt,
-                        ghl=ghl,
-                        is_ghl_connected=is_ghl_connected,
-                        system_instruction=system_instruction,
-                        model_name="meta-llama/llama-3.3-70b-instruct",
-                        api_url="https://openrouter.ai/api/v1/chat/completions",
-                        api_key=pool_key,
-                        provider_name="OpenRouter",
-                        location_id=location_id,
-                        access_token=access_token,
-                        history=history,
-                        intent=intent,
-                        is_fallback=True
-                    )
-                    return
+        # Validate Groq model name
+        valid_groq_models = ["groq/compound-mini", "groq/compound", "qwen/qwen3.8-27b", "qwen/qwen3.6-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "allam-2-7b"]
+        if model_name not in valid_groq_models:
+            model_name = "groq/compound-mini"
 
         payload: Dict[str, Any] = {
             "model": model_name,
