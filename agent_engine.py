@@ -1038,7 +1038,7 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                         )
                         return
                 elif self.groq_key:
-                    groq_target = "llama-3.2-11b-vision-preview" if has_images else "groq/compound"
+                    groq_target = "qwen/qwen3.8-27b"
                     logger.info("Falling back from Gemini stream to Groq Cloud...")
                     yield {
                         "type": "chunk",
@@ -1125,7 +1125,7 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                     ghl=ghl,
                     is_ghl_connected=is_ghl_connected,
                     system_instruction=system_instruction,
-                    model_name="llama-3.3-70b-versatile",
+                    model_name="qwen/qwen3.8-27b",
                     api_url="https://api.groq.com/openai/v1/chat/completions",
                     api_key=self.groq_key,
                     provider_name="Groq Cloud",
@@ -1246,9 +1246,8 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 
         # Groq TPM Safety Guardrail
         if provider_slug == "groq":
-            # Auto-upgrade to high-capacity groq/compound (70,000 TPM) for full builds and large prompts
-            if intent == "full_build" or "qwen" in model_name:
-                model_name = "llama-3.3-70b-versatile"
+            if model_name not in ["qwen/qwen3.8-27b", "qwen/qwen3.6-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "allam-2-7b", "groq/compound"]:
+                model_name = "qwen/qwen3.8-27b"
 
             est_prompt_tokens = sum(len(m.get("content", "")) // 4 for m in messages)
             if est_prompt_tokens > 5000 and not is_fallback:
@@ -1325,15 +1324,19 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                 
                 logger.warning(f"{provider_name} API Error ({resp.status_code}): {err_msg}")
                 
-                # If OpenRouter fails with 402/429/500, seamlessly failover to Groq Cloud (Free high speed LPU)
-                if is_openrouter and self.groq_key and (resp.status_code in [402, 429, 500, 502, 503] or "credits" in err_msg.lower()):
+                # If OpenRouter fails with 401/402/429/500, seamlessly failover to Groq Cloud (Free high speed LPU)
+                if is_openrouter and self.groq_key and (resp.status_code in [401, 402, 429, 500, 502, 503] or "credits" in err_msg.lower()):
                     logger.info("OpenRouter credit exhausted. Seamlessly routing to Groq Cloud...")
+                    yield {
+                        "type": "chunk",
+                        "text": "> ℹ️ **Notice:** OpenRouter credits depleted. Seamlessly switching to **Groq Cloud (Qwen 3.8 27B)**...\n\n---\n\n"
+                    }
                     yield from self._execute_openai_compatible(
                         prompt=prompt,
                         ghl=ghl,
                         is_ghl_connected=is_ghl_connected,
                         system_instruction=system_instruction,
-                        model_name="llama-3.3-70b-versatile",
+                        model_name="qwen/qwen3.8-27b",
                         api_url="https://api.groq.com/openai/v1/chat/completions",
                         api_key=self.groq_key,
                         provider_name="Groq Cloud",
