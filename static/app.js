@@ -137,12 +137,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isGenerating) {
             sendBtn.disabled = false;
             sendBtn.classList.add('generating-stop-mode');
-            sendBtn.title = 'Stop Generating Response (or Esc)';
+            sendBtn.title = 'Stop generating response (Esc)';
+            sendBtn.setAttribute('aria-label', 'Stop generating');
             sendBtn.innerHTML = `
-                <span style="display:flex; align-items:center; gap:5px; color:#fff; font-weight:600; font-size:12px;">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
-                    <span>Stop</span>
-                </span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="4" y="4" width="16" height="16" rx="3.5"></rect>
+                </svg>
             `;
         } else {
             sendBtn.classList.remove('generating-stop-mode');
