@@ -1,0 +1,110 @@
+[
+  {
+    "project_id": "pandacare_kpi_platform",
+    "project_title": "PandaCare Live KPI & Executive Command Center Platform",
+    "client_name": "PandaCare (Healthcare & Home Care Provider, Michigan)",
+    "industry": "Healthcare / Home Health Care / Executive Operations",
+    "topic": "Executive Overview & Business Objectives",
+    "text": "PandaCare Live KPI Reporting Platform & Executive Command Center:\nDesigned and engineered a live management command center for PandaCare to give leadership instant visibility (<10 seconds) into Lead Volume, Source Performance, Marketing Spend Efficiency, CAC (Customer Acquisition Cost), Pipeline Conversion Velocity, Employee Performance, and Client Lifecycle/Retention.\nDirectly mapped to PandaCare's live GoHighLevel operations in Michigan.",
+    "key_technologies": [
+      "GoHighLevel API v2",
+      "Custom KPI Dashboard",
+      "Webhooks",
+      "Real-Time Aggregation",
+      "Healthcare Pipeline Sync"
+    ],
+    "embedding": null
+  },
+  {
+    "project_id": "pandacare_kpi_platform",
+    "project_title": "PandaCare Live KPI & Executive Command Center Platform",
+    "client_name": "PandaCare (Healthcare & Home Care Provider, Michigan)",
+    "industry": "Healthcare / Home Health Care",
+    "topic": "GoHighLevel 11-Stage Pipeline Architecture",
+    "text": "PandaCare GoHighLevel 11-Stage Pipeline Data Architecture:\nThe entire reporting system was engineered around PandaCare's exact GoHighLevel pipeline:\n1. Unassigned Lead\n2. Vetting Lead\n3. MCD Applicant\n4. Pending HH App. Forms\n5. Dr. Appt. Scheduled\n6. Referred to the County\n7. ASW Assigned, Pending CA\n8. CA Scheduled\n9. CA Completed, Pending Auth\n10. Auth Received, Pending PA\n11. Provided Clock-in Information\nFinal Outcomes: Client / Closed (Won) | Disqualified (Non-Qualified / Failed Lead).\nIncludes SLA timers, bottleneck stage alerts, and conversion velocity tracking across all 11 stages.",
+    "key_technologies": [
+      "GoHighLevel CRM Pipelines",
+      "Opportunity Status Sync",
+      "SLA Timers",
+      "Conversion Rate Optimization"
+    ],
+    "embedding": null
+  },
+  {
+    "project_id": "pandacare_kpi_platform",
+    "project_title": "PandaCare Live KPI & Executive Command Center Platform",
+    "client_name": "PandaCare",
+    "industry": "Healthcare / Lead Attribution",
+    "topic": "Marketing Attribution, Source Performance & CAC Engine",
+    "text": "Multi-Channel Lead Attribution & Marketing Efficiency Engine (PandaCare):\nAggregated and correlated lead sources (Facebook Ads, Google PPC, Direct Inquiries, Community Referrals) with actual ad spend to compute real-time Cost Per Lead (CPL), Cost Per Qualified Applicant (CPQA), and Customer Acquisition Cost (CAC).\nEnabled management to identify top-performing ad channels and terminate underperforming campaigns dynamically.",
+    "key_technologies": [
+      "Multi-Channel Attribution",
+      "CAC / CPL Calculation",
+      "Ad Spend ROI Analysis",
+      "GHL Custom Fields"
+    ],
+    "embedding": null
+  },
+  {
+    "project_id": "pandacare_kpi_platform",
+    "project_title": "PandaCare Live KPI & Executive Command Center Platform",
+    "client_name": "PandaCare",
+    "industry": "Healthcare / Employee Operations",
+    "topic": "Staff Performance, Accountability & Retention Tracking",
+    "text": "Employee Performance Leaderboard & Rep Accountability (PandaCare):\nTracks individual team member KPIs including Speed to Lead (first contact time), stage conversion ratios, overdue task backlog, and client onboarding success rate.\nProvides automated warnings when leads remain in vetting or county referral stages past defined SLA thresholds.",
+    "key_technologies": [
+      "Employee Leaderboards",
+      "Speed to Lead Tracking",
+      "SLA Breach Alerts",
+      "GHL Task Management"
+    ],
+    "embedding": null
+  },
+  {
+    "project_id": "xortlogix_fb_dashboard",
+    "project_title": "XortLogix Facebook Ads Analytics & Client Management Dashboard",
+    "client_name": "XortLogix (xortlogix.com)",
+    "industry": "Digital Marketing Agency / SaaS Analytics",
+    "topic": "Executive Overview & Technology Stack",
+    "text": "XortLogix Facebook Ads Analytics & Client Management Platform:\nArchitected a custom white-label analytics dashboard providing near real-time reporting directly from Meta/Facebook Marketing APIs without relying on expensive 3rd-party reporting intermediaries.\nTech Stack: Laravel backend (PHP), Bootstrap frontend, Meta Marketing API (Insights, Campaigns, Ad Sets, Ads), and GoHighLevel (GHL) API v2 with Webhook integrations.\nHosted entirely on the client's custom domain with full data ownership.",
+    "key_technologies": [
+      "Laravel (PHP)",
+      "Bootstrap",
+      "Meta Marketing API",
+      "GoHighLevel API v2",
+      "Custom Webhooks",
+      "MySQL"
+    ],
+    "embedding": null
+  },
+  {
+    "project_id": "xortlogix_fb_dashboard",
+    "project_title": "XortLogix Facebook Ads Analytics & Client Management Dashboard",
+    "client_name": "XortLogix",
+    "industry": "Digital Marketing / Ad Management",
+    "topic": "Multi-Tenant Client Switching & Performance Comparison",
+    "text": "Multi-Tenant Agency Client & Ad Account Switcher:\nBuilt a scalable multi-company structure enabling agency managers to switch between clients and ad accounts seamlessly via dynamic dropdown filters.\nSupports side-by-side performance comparison across accounts (Impressions, Clicks, CTR, CPC, Spend, ROAS, and Lead Conversion counts).",
+    "key_technologies": [
+      "Multi-Tenant Architecture",
+      "Ad Account Switcher",
+      "Cross-Account Analytics",
+      "Custom Role-Based Access"
+    ],
+    "embedding": null
+  },
+  {
+    "project_id": "xortlogix_fb_dashboard",
+    "project_title": "XortLogix Facebook Ads Analytics & Client Management Dashboard",
+    "client_name": "XortLogix",
+    "industry": "Marketing Automation / CRM Integration",
+    "topic": "GoHighLevel CRM Integration & Automated Exporting",
+    "text": "GoHighLevel (GHL) Workflow Triggering & Multi-Format Reporting Exports:\nIntegrated bi-directional synchronization with GoHighLevel to trigger automated CRM workflows and follow-up sequences directly from dashboard performance events.\nIncludes automated scheduled report generation and on-demand exports in Excel, CSV, and branded PDF formats.",
+    "key_technologies": [
+      "GHL Workflow Triggers",
+      "Automated PDF Exports",
+      "Excel / CSV Reporting",
+      "Meta API Insights Sync"
+    ],
+    "embedding": null
+  }
+]

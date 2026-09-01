@@ -18,11 +18,17 @@ from typing import List, Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CHROMA_DIR = os.path.join(BASE_DIR, "ghl_chroma_db")
 DATA_DIR = os.path.join(BASE_DIR, "data")
-EMBEDDINGS_FILE = os.path.join(DATA_DIR, "agency_portfolio_embeddings.json")
+
+CHROMA_EMBEDDINGS_FILE = os.path.join(CHROMA_DIR, "agency_portfolio_embeddings.json")
+DATA_EMBEDDINGS_FILE = os.path.join(DATA_DIR, "agency_portfolio_embeddings.json")
+
+EMBEDDINGS_FILE = CHROMA_EMBEDDINGS_FILE if os.path.exists(CHROMA_EMBEDDINGS_FILE) else DATA_EMBEDDINGS_FILE
 
 PDF_PATH = os.path.join(BASE_DIR, "KPI Scope .pdf")
 DOCX_PATH = os.path.join(BASE_DIR, "XortLogix_Facebook_Analytics_Dashboard_Project_Document.docx")
+
 
 
 def _cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:

@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -42,3 +42,6 @@ venv.bak/
 Thumbs.db
 
 model_usage.json
+*.sqlite3
+*.db
+
