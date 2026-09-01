@@ -1438,6 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const iconsMap = {
                 'Google Gemini': '✨',
                 'Groq Ultra-Fast': '⚡',
+                'RapidAPI Free': '🌐',
                 'Other Models': '🔹'
             };
 

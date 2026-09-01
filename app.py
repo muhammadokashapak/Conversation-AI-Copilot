@@ -34,13 +34,15 @@ from usage_tracker import usage_tracker
 from key_pool_manager import openrouter_key_pool, gemini_key_pool
 
 def get_server_keys() -> Dict[str, str]:
-    """Load API keys for Gemini, Groq, and active OpenRouter key from the dynamic pool."""
+    """Load API keys for Gemini, Groq, RapidAPI, and active OpenRouter key from the dynamic pool."""
     active_or_key = openrouter_key_pool.get_active_key() or os.getenv("OPENROUTER_API_KEY", "").strip()
     active_gemini_key = gemini_key_pool.get_active_key() or os.getenv("GEMINI_API_KEY", "").strip()
     return {
         "gemini": active_gemini_key,
         "groq": os.getenv("GROQ_API_KEY", "").strip(),
-        "openrouter": active_or_key
+        "openrouter": active_or_key,
+        "rapidapi": os.getenv("RAPIDAPI_KEY", "").strip(),
+        "rapidapi_host": os.getenv("RAPIDAPI_HOST", "free-chatgpt-api.p.rapidapi.com").strip()
     }
 
 app = FastAPI(
@@ -69,7 +71,7 @@ class AgentChatRequest(BaseModel):
     prompt: str
     location_id: Optional[str] = ""
     access_token: Optional[str] = ""
-    selected_model: Optional[str] = "groq/compound-mini"
+    selected_model: Optional[str] = "gemini-3.6-flash"
     history: Optional[List[Dict[str, Any]]] = []
     attachments: Optional[List[AttachmentItem]] = []
 
@@ -86,7 +88,8 @@ async def health_check():
         "port": 7861,
         "providers": {
             "gemini": bool(keys["gemini"] and keys["gemini"] != "YOUR_GEMINI_API_KEY_HERE"),
-            "groq": bool(keys["groq"] and keys["groq"] != "YOUR_GROQ_API_KEY_HERE")
+            "groq": bool(keys["groq"] and keys["groq"] != "YOUR_GROQ_API_KEY_HERE"),
+            "rapidapi": bool(keys["rapidapi"])
         }
     }
 
@@ -106,7 +109,8 @@ async def get_models_catalog():
         "models": enriched_models,
         "active_providers": {
             "gemini": bool(keys["gemini"]),
-            "groq": bool(keys["groq"])
+            "groq": bool(keys["groq"]),
+            "rapidapi": bool(keys["rapidapi"])
         },
         "default_model": "gemini-3.6-flash"
     }
@@ -198,7 +202,9 @@ async def agent_chat_endpoint(req: AgentChatRequest):
     engine = GHLAgentExecutionEngine(
         gemini_key=keys["gemini"],
         groq_key=keys["groq"],
-        openrouter_key=keys["openrouter"]
+        openrouter_key=keys["openrouter"],
+        rapidapi_key=keys["rapidapi"],
+        rapidapi_host=keys["rapidapi_host"]
     )
 
     selected_model = req.selected_model or "gemini-3.6-flash"

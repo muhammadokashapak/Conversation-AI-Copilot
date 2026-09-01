@@ -383,6 +383,17 @@ MODELS_CATALOG = [
         "badge": "Bilingual",
         "supports_tools": False,
         "description": "Fast conversational engine with Arabic & English multilingual support."
+    },
+
+    # RapidAPI Free ChatGPT Gateway
+    {
+        "id": "rapidapi-chatgpt",
+        "name": "RapidAPI Free ChatGPT",
+        "provider": "rapidapi",
+        "category": "RapidAPI Free",
+        "badge": "⚡ RapidAPI",
+        "supports_tools": False,
+        "description": "Free ChatGPT API gateway hosted via RapidAPI marketplace."
     }
 ]
 
@@ -561,6 +572,8 @@ def detect_provider(model_name: str) -> str:
     for item in MODELS_CATALOG:
         if item["id"].lower() == model_name:
             return item["provider"]
+    if "rapidapi" in model_name:
+        return "rapidapi"
     if model_name.startswith("gemini-"):
         return "gemini"
     return "groq"
@@ -584,12 +597,14 @@ def stream_text_tokens(text: str) -> Generator[Dict[str, Any], None, None]:
 
 class GHLAgentExecutionEngine:
     """
-    High-Performance AI Action Execution Engine for GoHighLevel supporting Google Gemini and Groq Cloud LPU.
+    High-Performance AI Action Execution Engine for GoHighLevel supporting Google Gemini, Groq Cloud, and RapidAPI.
     """
-    def __init__(self, gemini_key: str = "", groq_key: str = "", openrouter_key: str = ""):
+    def __init__(self, gemini_key: str = "", groq_key: str = "", openrouter_key: str = "", rapidapi_key: str = "", rapidapi_host: str = ""):
         self.gemini_key = gemini_key.strip()
         self.groq_key = groq_key.strip()
         self.openrouter_key = openrouter_key.strip()
+        self.rapidapi_key = rapidapi_key.strip() or os.getenv("RAPIDAPI_KEY", "").strip()
+        self.rapidapi_host = rapidapi_host.strip() or os.getenv("RAPIDAPI_HOST", "free-chatgpt-api.p.rapidapi.com").strip()
         self.gemini_client = genai.Client(api_key=self.gemini_key) if self.gemini_key else None
 
     def execute_agent_prompt(
@@ -602,7 +617,7 @@ class GHLAgentExecutionEngine:
         attachments: Optional[List[Dict[str, Any]]] = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Processes prompt via Gemini or Groq Cloud API, determines tool calls, executes GHL API commands, and yields SSE stream updates.
+        Processes prompt via Gemini, Groq Cloud, or RapidAPI, determines tool calls, executes GHL API commands, and yields SSE stream updates.
         Supports multimodal attachments (images, PDFs, documents, code).
         """
         provider = detect_provider(model_name)
@@ -639,6 +654,13 @@ class GHLAgentExecutionEngine:
                 intent=intent,
                 attachments=attachments
             )
+        elif provider == "rapidapi":
+            yield from self._execute_rapidapi(
+                prompt=prompt,
+                system_instruction=system_instruction,
+                history=history,
+                intent=intent
+            )
         else:
             yield from self._execute_openai_compatible(
                 prompt=prompt,
@@ -655,6 +677,58 @@ class GHLAgentExecutionEngine:
                 intent=intent,
                 attachments=attachments
             )
+
+    def _execute_rapidapi(
+        self,
+        prompt: str,
+        system_instruction: str,
+        history: Optional[List[Dict[str, str]]] = None,
+        intent: str = "quick_answer"
+    ) -> Generator[Dict[str, Any], None, None]:
+        """
+        Executes prompt via RapidAPI Free ChatGPT endpoint with token streaming.
+        """
+        if not self.rapidapi_key:
+            yield {"type": "chunk", "text": format_friendly_error_banner("RapidAPI Key missing.")}
+            return
+
+        url = f"https://{self.rapidapi_host}/chat-completion-one"
+        headers = {
+            "x-rapidapi-key": self.rapidapi_key,
+            "x-rapidapi-host": self.rapidapi_host
+        }
+        full_query = f"{system_instruction}\n\nUser Request:\n{prompt}"
+        params = {"prompt": full_query[:4000]}
+
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=45)
+            if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                    raw_text = data.get("response") or data.get("text") or data.get("result") or str(data)
+                except Exception:
+                    raw_text = resp.text
+
+                yield from stream_text_tokens(raw_text)
+            elif resp.status_code == 403:
+                yield {
+                    "type": "chunk",
+                    "text": (
+                        "> ⚠️ **RapidAPI Notice (403 Forbidden):**\n"
+                        ">\n"
+                        "> `You are not subscribed to this API.`\n"
+                        ">\n"
+                        "> 💡 **To activate this endpoint on your RapidAPI account:**\n"
+                        "> 1. Open the [Free ChatGPT API on RapidAPI](https://rapidapi.com/chatgpt-api-chatgpt-api-default/api/free-chatgpt-api).\n"
+                        "> 2. Click the **'Pricing'** tab and click **'Subscribe'** on the Free plan ($0/mo).\n"
+                        "> 3. Once subscribed, RapidAPI will authorize your key instantly!"
+                    )
+                }
+            else:
+                yield {"type": "chunk", "text": f"⚠️ **RapidAPI Error ({resp.status_code}):** {resp.text}"}
+        except Exception as e:
+            logger.error(f"RapidAPI request failed: {e}")
+            yield {"type": "chunk", "text": format_friendly_error_banner(str(e))}
 
     def _build_system_prompt(self, intent: str, provider: str, is_ghl_connected: bool, location_id: str, prompt: str = "") -> str:
         """
