@@ -911,6 +911,7 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 =============================================================================
 - Output the complete, enterprise-grade architecture with executive formatting.
 - Deliver the 100% complete, fully styled single-block ````html <!DOCTYPE html> ... </html> ```` code.
+- Write modern, high-density, concise HTML/CSS/JS that delivers every requested step without verbose repetitive boilerplate, ensuring the entire 5-step application and CRM tables complete cleanly without truncation.
 - Format CRM Custom Fields, Tags, Pipelines, and Workflows into comprehensive Markdown tables and ASCII flow diagrams.
 - DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
 {tool_block}
@@ -1008,9 +1009,13 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                     if stream_started and detect_truncation(accumulated_text):
                         logger.info(f"Gemini output truncated. Auto-triggering seamless continuation...")
                         try:
-                            cont_contents = list(contents)
-                            cont_contents.append(types.Content(role="model", parts=[types.Part.from_text(text=accumulated_text)]))
-                            cont_contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Continue generating the output EXACTLY from where you left off. Do not repeat previous text or code blocks. Resume immediately from the exact last character.")]))
+                            recent_tail = accumulated_text[-1800:]
+                            last_cutoff = accumulated_text[-60:].replace('\n', ' ')
+                            cont_contents = [
+                                types.Content(role="user", parts=[types.Part.from_text(text=prompt)]),
+                                types.Content(role="model", parts=[types.Part.from_text(text=f"...{recent_tail}")]),
+                                types.Content(role="user", parts=[types.Part.from_text(text=f"Your response was cut off at: '{last_cutoff}'. Continue generating the remaining code and text EXACTLY from that point without repeating anything. Complete all remaining steps and close all tags cleanly.")])
+                            ]
                             cont_stream = current_client.models.generate_content_stream(
                                 model=mod,
                                 contents=cont_contents,
@@ -1022,6 +1027,9 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                                     yield {"type": "chunk", "text": c_chunk.text}
                         except Exception as e_cont:
                             logger.warning(f"Gemini auto-continuation failed: {e_cont}")
+
+                    if accumulated_text.count('```') % 2 != 0:
+                        yield {"type": "chunk", "text": "\n```\n"}
 
                     gemini_key_pool.record_success(active_gemini_key)
                     return
@@ -1442,12 +1450,16 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                 while (finish_reason == "length" or detect_truncation(accumulated_text)) and max_continuations > 0:
                     max_continuations -= 1
                     logger.info(f"Auto-continuation triggered for {provider_name} (finish_reason={finish_reason}, len={len(accumulated_text)})")
-                    cont_messages = list(messages)
-                    cont_messages.append({"role": "assistant", "content": accumulated_text})
-                    cont_messages.append({
-                        "role": "user",
-                        "content": "Continue generating the output EXACTLY from where you left off. Do not repeat previous text or code blocks. Resume immediately from the exact last character."
-                    })
+                    recent_tail = accumulated_text[-1800:]
+                    last_cutoff = accumulated_text[-60:].replace('\n', ' ')
+                    cont_messages = [
+                        {"role": "user", "content": prompt},
+                        {"role": "assistant", "content": f"...{recent_tail}"},
+                        {
+                            "role": "user",
+                            "content": f"Your response was cut off at: '{last_cutoff}'. Continue generating the remaining code and text EXACTLY from that point without repeating previous text. Complete all remaining sections and close all tags cleanly."
+                        }
+                    ]
                     cont_payload = {
                         "model": model_name,
                         "messages": cont_messages,
@@ -1483,6 +1495,9 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                     except Exception as e_cont:
                         logger.warning(f"Continuation request failed: {e_cont}")
                         break
+
+                if accumulated_text.count('```') % 2 != 0:
+                    yield {"type": "chunk", "text": "\n```\n"}
                 return
 
             data = resp.json()
