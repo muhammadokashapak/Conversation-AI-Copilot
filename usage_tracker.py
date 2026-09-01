@@ -98,16 +98,31 @@ class ModelUsageTracker:
         return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     def _load(self) -> Dict[str, Any]:
+        data = {"current_day": self._get_current_day(), "models": {}}
         if os.path.exists(self.usage_file):
             try:
                 with open(self.usage_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
             except Exception:
-                pass
-        return {"current_day": self._get_current_day(), "models": {}}
+                bak_file = self.usage_file + ".bak"
+                if os.path.exists(bak_file):
+                    try:
+                        with open(bak_file, "r", encoding="utf-8") as bf:
+                            data = json.load(bf)
+                    except Exception:
+                        pass
+        # Prune orphan models not in MODEL_SPECS
+        if "models" in data and isinstance(data["models"], dict):
+            valid_models = {k: v for k, v in data["models"].items() if k in MODEL_SPECS}
+            data["models"] = valid_models
+        return data
 
     def _save(self):
         try:
+            # Create backup before writing
+            if os.path.exists(self.usage_file):
+                import shutil
+                shutil.copy2(self.usage_file, self.usage_file + ".bak")
             with open(self.usage_file, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2)
         except Exception:

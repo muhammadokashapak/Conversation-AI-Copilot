@@ -33,6 +33,41 @@ from agent_engine import GHLAgentExecutionEngine, MODELS_CATALOG, format_friendl
 from usage_tracker import usage_tracker
 from key_pool_manager import openrouter_key_pool, gemini_key_pool
 
+# --- Singleton Engine & Connection Cache ---
+_engine_instance: Optional[GHLAgentExecutionEngine] = None
+_engine_keys_hash: str = ""
+_conn_cache: Dict[str, Any] = {}  # {location_id: {result, timestamp}}
+_CONN_CACHE_TTL = 300  # 5 minutes
+
+import time as _time
+
+def _get_engine() -> GHLAgentExecutionEngine:
+    """Returns a singleton engine instance, recreated only if API keys change."""
+    global _engine_instance, _engine_keys_hash
+    keys = get_server_keys()
+    current_hash = f"{keys['gemini']}|{keys['groq']}|{keys['openrouter']}|{keys['rapidapi']}"
+    if _engine_instance is None or current_hash != _engine_keys_hash:
+        _engine_instance = GHLAgentExecutionEngine(
+            gemini_key=keys["gemini"],
+            groq_key=keys["groq"],
+            openrouter_key=keys["openrouter"],
+            rapidapi_key=keys["rapidapi"],
+            rapidapi_host=keys["rapidapi_host"]
+        )
+        _engine_keys_hash = current_hash
+        logger.info("GHLAgentExecutionEngine singleton created/refreshed.")
+    return _engine_instance
+
+def _verify_connection_cached(location_id: str, access_token: str) -> Optional[Dict[str, Any]]:
+    """Returns cached verify_connection result if within TTL, else None."""
+    cached = _conn_cache.get(location_id)
+    if cached and (_time.time() - cached["timestamp"]) < _CONN_CACHE_TTL:
+        return cached["result"]
+    return None
+
+def _set_connection_cache(location_id: str, result: Dict[str, Any]):
+    _conn_cache[location_id] = {"result": result, "timestamp": _time.time()}
+
 def get_server_keys() -> Dict[str, str]:
     """Load API keys for Gemini, Groq, RapidAPI, and active OpenRouter key from the dynamic pool."""
     active_or_key = openrouter_key_pool.get_active_key() or os.getenv("OPENROUTER_API_KEY", "").strip()
@@ -198,14 +233,7 @@ async def agent_chat_endpoint(req: AgentChatRequest):
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt string cannot be empty.")
 
-    keys = get_server_keys()
-    engine = GHLAgentExecutionEngine(
-        gemini_key=keys["gemini"],
-        groq_key=keys["groq"],
-        openrouter_key=keys["openrouter"],
-        rapidapi_key=keys["rapidapi"],
-        rapidapi_host=keys["rapidapi_host"]
-    )
+    engine = _get_engine()
 
     selected_model = req.selected_model or "gemini-3.6-flash"
 

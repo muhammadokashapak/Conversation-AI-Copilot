@@ -1494,10 +1494,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Auto-refresh models usage every 10s for live TPM cooldown and accuracy
+    // Smart visibility-aware polling: 30s when active, 10s when usage modal is open, 0 when tab hidden
     setInterval(() => {
-        fetchModelsCatalog();
+        if (document.hidden) return; // Pause polling when tab is inactive
+        const modalOpen = usageModal && !usageModal.classList.contains('hidden');
+        if (modalOpen || isGenerating) {
+            fetchModelsCatalog();
+            if (modalOpen) renderUsageModalGrid();
+        }
     }, 10000);
+
+    // Refresh every 30s when tab is visible and idle
+    setInterval(() => {
+        if (document.hidden) return;
+        const modalOpen = usageModal && !usageModal.classList.contains('hidden');
+        if (!modalOpen && !isGenerating) {
+            fetchModelsCatalog();
+        }
+    }, 30000);
 
     // Usage Modal Handlers
     if (openUsageModalBtn) openUsageModalBtn.addEventListener('click', openUsageModal);

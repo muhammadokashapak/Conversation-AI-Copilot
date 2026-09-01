@@ -145,10 +145,26 @@ def format_friendly_error_banner(reason: str = "") -> str:
     )
 
 
-def get_token_budget(provider: str, intent: str) -> int:
+# Per-model actual output token ceilings (verified from provider docs)
+MODEL_OUTPUT_CAPS = {
+    'groq/compound-mini': 4096,
+    'groq/compound': 4096,
+    'qwen/qwen3.8-27b': 4096,
+    'qwen/qwen3.6-27b': 4096,
+    'openai/gpt-oss-120b': 4096,
+    'openai/gpt-oss-20b': 4096,
+    'allam-2-7b': 4096,
+    'gemini-3.6-flash': 8192,
+    'gemini-3.7-flash': 8192,
+    'gemini-3.5-flash': 8192,
+    'gemini-flash-latest': 8192,
+    'rapidapi-chatgpt': 2048,
+}
+
+def get_token_budget(provider: str, intent: str, model_name: str = '') -> int:
     """
-    Returns the optimal max_tokens for a given provider × intent combination.
-    Guarantees sufficient token space so full HTML/CSS code blocks and tables are NEVER truncated.
+    Returns the optimal max_tokens for a given provider × intent combination,
+    capped by the model's actual output ceiling.
     """
     budgets = {
         'groq': {
@@ -167,7 +183,9 @@ def get_token_budget(provider: str, intent: str) -> int:
             'quick_answer': 1500,
         }
     }
-    return budgets.get(provider, budgets['groq']).get(intent, 4000)
+    requested = budgets.get(provider, budgets['groq']).get(intent, 4000)
+    cap = MODEL_OUTPUT_CAPS.get(model_name, 8192)
+    return min(requested, cap)
 
 
 def get_temperature(intent: str, is_tool_mode: bool = False) -> float:
@@ -209,9 +227,13 @@ def compress_history(
     if not history:
         return []
 
-    # If building a fresh architecture (full_build), start with 100% clean context to eliminate context pollution & token waste
+    # For full_build: keep ONLY the last 2 user messages (brand context) but drop large assistant responses
     if intent == "full_build":
-        return []
+        user_msgs = [m for m in history if m.get('role') == 'user']
+        if not user_msgs:
+            return []
+        kept = user_msgs[-2:]  # Last 2 user messages with requirements/brand info
+        return [{'role': 'user', 'content': m.get('content', '')[:600]} for m in kept]
 
     if max_messages <= 0:
         max_messages = 6 if provider == 'gemini' else 4
@@ -253,8 +275,8 @@ def compress_history(
 
 def detect_truncation(text: str) -> bool:
     """
-    Detects if a response was likely truncated mid-generation.
-    Checks for unclosed HTML applications, unclosed code fences, mid-tag cutoffs, etc.
+    Detects if a response was genuinely truncated mid-generation.
+    Only triggers on definitive structural indicators, NOT on missing punctuation.
     """
     if not text or len(text) < 100:
         return False
@@ -269,13 +291,9 @@ def detect_truncation(text: str) -> bool:
     if fence_count % 2 != 0:
         return True
 
-    clean_end = text.strip()
-    if clean_end.endswith(('<', '=', '"', "'", '(', '{', '[', ':', ',')):
-        return True
-
-    # Check if text ends mid-sentence (no terminal punctuation in last 80 chars)
-    last_segment = clean_end[-80:]
-    if last_segment and not any(last_segment.endswith(c) for c in ('.', '!', '?', '|', ']', '`', '>', '*')):
+    # Check for mid-tag or mid-attribute cutoff
+    clean_end = text.rstrip()
+    if clean_end and clean_end[-1] in ('<', '=', '{', '['):
         return True
 
     return False
@@ -473,12 +491,13 @@ GHL_TOOLS_DECLARATIONS = [
     },
     {
         "name": "create_custom_field",
-        "description": "Create a Custom Field (TEXT, NUMBER, DATE, etc.) in the sub-account.",
+        "description": "Create a Custom Field (TEXT, NUMBER, DATE, SINGLE_OPTIONS, etc.) in the sub-account.",
         "parameters": {
             "type": "OBJECT",
             "properties": {
                 "name": {"type": "STRING", "description": "Name of custom field"},
-                "data_type": {"type": "STRING", "description": "Data type: TEXT, NUMBER, DATE, SINGLE_OPTIONS"}
+                "data_type": {"type": "STRING", "description": "Data type: TEXT, NUMBER, DATE, SINGLE_OPTIONS"},
+                "options": {"type": "ARRAY", "items": {"type": "STRING"}, "description": "List of options for SINGLE_OPTIONS or dropdown fields"}
             },
             "required": ["name"]
         }
@@ -623,9 +642,18 @@ class GHLAgentExecutionEngine:
         provider = detect_provider(model_name)
         ghl = GHLSubAccountClient(location_id=location_id, access_token=access_token)
         
-        # Check connection status first if credentials provided
+        # Check connection status with in-memory cache (5 min TTL) to avoid hitting GHL API on every message
         if location_id and access_token:
-            conn_status = ghl.verify_connection()
+            import time as _t
+            cache_key = f"{location_id}:{access_token[:8]}"
+            if not hasattr(self, '_conn_cache'):
+                self._conn_cache = {}
+            cached = self._conn_cache.get(cache_key)
+            if cached and (_t.time() - cached["ts"]) < 300:
+                conn_status = cached["result"]
+            else:
+                conn_status = ghl.verify_connection()
+                self._conn_cache[cache_key] = {"result": conn_status, "ts": _t.time()}
             if not conn_status.get("success"):
                 yield {"type": "tool_start", "name": "verify_connection", "args": {"location_id": location_id}}
                 yield {"type": "tool_result", "name": "verify_connection", "result": conn_status}
@@ -697,7 +725,9 @@ class GHLAgentExecutionEngine:
             "x-rapidapi-key": self.rapidapi_key,
             "x-rapidapi-host": self.rapidapi_host
         }
-        full_query = f"{system_instruction}\n\nUser Request:\n{prompt}"
+        # Compact system header so user's prompt gets maximum available character budget
+        concise_sys = "You are an expert GoHighLevel CRM & Funnel Technical Copilot. Provide direct, high-quality, practical answers."
+        full_query = f"{concise_sys}\n\nUser Request:\n{prompt}"
         params = {"prompt": full_query[:4000]}
 
         try:
@@ -847,33 +877,26 @@ TASK DIRECTIVE: ITERATIVE MODIFICATION & REFINEMENT
 """
 
         # For full_build: ALWAYS deliver complete code block first followed by full CRM architecture
+        # DYNAMIC: Extract brand/industry context from the user's prompt instead of hardcoding
         return base_prompt + f"""
-=============================================================================
-MANDATORY GOHIGHLEVEL (GHL) OPERATIONAL RULES
-=============================================================================
 {base_rules}
 =============================================================================
 TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 =============================================================================
 You are a Lead Solutions Architect. The user is requesting a FULL PRODUCTION BUILD.
-You MUST deliver all 4 sections in this exact order:
+Output all 4 sections in this exact order with ZERO preamble text:
 
-1. 🚀 Complete Single-File Interactive HTML/CSS/JS Funnel Application (```html <!DOCTYPE html> ... </html>```)
-   • Deliver Section 1 FIRST so the live visual artifact renders immediately.
-   • Use Tailwind CSS CDN (`<script src="https://cdn.tailwindcss.com"></script>`) with utility classes on elements.
-   • MUST contain ALL 5 steps inside the single HTML file:
-     - Step 1 (`#optin`): Lead capture form with VIP pass unlock
-     - Step 2 (`#vsl`): Video Sales Letter player with simulated 80% watch progress unlock trigger
-     - Step 3 (`#checkout`): 2-Step Checkout order form ($499 program)
-     - Step 4 (`#upsell`): 1-Click Upsell OTO offer ($197 add-on)
-     - Step 5 (`#thankyou`): Onboarding confirmation & VIP voucher display
-   • Include the complete `<script>` tag with interactive multi-step navigation logic.
-   • Guarantee the code completes 100% from `<!DOCTYPE html>` down to `</html>``` ` without stopping midway.
+1. Complete Single-File HTML App (```html <!DOCTYPE html> ... </html>```)
+   • Use Tailwind CSS CDN (`<script src="https://cdn.tailwindcss.com"></script>`) with utility classes.
+   • ALL funnel steps inside ONE file with JavaScript tab navigation.
+   • DO NOT split into 5 separate HTML files with duplicate <!DOCTYPE html> headers.
+   • Guarantee code completes from <!DOCTYPE html> to </html> without stopping.
 
-2. 🗺️ Funnel Step Map & URLs (Compact Markdown Table)
-3. 📊 HighLevel Pipeline Stages, Custom Fields & Tags (Compact Markdown Tables)
-4. ⚡ Connected Drop-off Recovery Workflows (Detailed Action sequences with triggers, wait timers, and SMS/Email copy)
-- DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
+2. Funnel Step Map & URLs (Compact Markdown Table)
+3. HighLevel Pipeline Stages, Custom Fields & Tags (Compact Markdown Tables)
+4. Connected Drop-off Recovery Workflows (Triggers, wait timers, SMS/Email copy)
+
+DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
 {tool_block}
 """
 
@@ -966,22 +989,26 @@ You MUST deliver all 4 sections in this exact order:
                             yield {"type": "chunk", "text": chunk.text}
 
                     # Multi-Pass Seamless Auto-Continuation for Gemini
+                    # OPTIMIZED: Don't resend original prompt — only tail + instruction
                     max_gemini_cont = 3
                     while stream_started and detect_truncation(accumulated_text) and max_gemini_cont > 0:
                         max_gemini_cont -= 1
                         logger.info(f"Gemini output truncated (len={len(accumulated_text)}). Auto-triggering seamless continuation {3 - max_gemini_cont}/3...")
                         try:
-                            recent_tail = accumulated_text[-1800:]
-                            last_cutoff = accumulated_text[-60:].replace('\n', ' ')
+                            recent_tail = accumulated_text[-2400:]
+                            last_cutoff = accumulated_text[-80:].replace('\n', ' ')
                             cont_contents = [
-                                types.Content(role="user", parts=[types.Part.from_text(text=prompt)]),
-                                types.Content(role="model", parts=[types.Part.from_text(text=f"...{recent_tail}")]),
-                                types.Content(role="user", parts=[types.Part.from_text(text=f"Your response was cut off at: '{last_cutoff}'. Continue generating the remaining code and text EXACTLY from that point without repeating previous text. Complete all remaining sections, close all HTML tags, and finish completely.")])
+                                types.Content(role="model", parts=[types.Part.from_text(text=recent_tail)]),
+                                types.Content(role="user", parts=[types.Part.from_text(text=f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Complete all remaining sections and close all HTML tags.")])
                             ]
+                            cont_config = {
+                                "temperature": temp,
+                                "max_output_tokens": max_toks
+                            }
                             cont_stream = current_client.models.generate_content_stream(
                                 model=mod,
                                 contents=cont_contents,
-                                config=types.GenerateContentConfig(**config_args)
+                                config=types.GenerateContentConfig(**cont_config)
                             )
                             for c_chunk in cont_stream:
                                 if c_chunk.text:
@@ -989,7 +1016,6 @@ You MUST deliver all 4 sections in this exact order:
                                     yield {"type": "chunk", "text": c_chunk.text}
                         except Exception as e_cont:
                             logger.warning(f"Gemini auto-continuation error on key {active_gemini_key[:8]}: {e_cont}")
-                            # Rotate key in pool if 429 occurs during continuation
                             if "429" in str(e_cont) or "RESOURCE_EXHAUSTED" in str(e_cont):
                                 gemini_key_pool.mark_key_depleted(active_gemini_key, 429, str(e_cont))
                                 next_k = gemini_key_pool.get_active_key()
@@ -1145,6 +1171,8 @@ You MUST deliver all 4 sections in this exact order:
                     location_id=location_id,
                     access_token=access_token,
                     history=history,
+                    intent=intent,
+                    attachments=attachments,
                     is_fallback=True
                 )
                 return
@@ -1358,18 +1386,18 @@ You MUST deliver all 4 sections in this exact order:
                                 pass
 
                 # Auto-Continuation loop if stream cut off (finish_reason == "length" or unclosed code fence)
+                # OPTIMIZED: Don't resend original prompt or system prompt — saves ~800 tokens per continuation
                 max_continuations = 3
                 while (finish_reason == "length" or detect_truncation(accumulated_text)) and max_continuations > 0:
                     max_continuations -= 1
                     logger.info(f"Auto-continuation triggered for {provider_name} (finish_reason={finish_reason}, len={len(accumulated_text)})")
-                    recent_tail = accumulated_text[-1800:]
-                    last_cutoff = accumulated_text[-60:].replace('\n', ' ')
+                    recent_tail = accumulated_text[-2400:]
+                    last_cutoff = accumulated_text[-80:].replace('\n', ' ')
                     cont_messages = [
-                        {"role": "user", "content": prompt},
-                        {"role": "assistant", "content": f"...{recent_tail}"},
+                        {"role": "assistant", "content": recent_tail},
                         {
                             "role": "user",
-                            "content": f"Your response was cut off at: '{last_cutoff}'. Continue generating the remaining code and text EXACTLY from that point without repeating previous text. Complete all remaining sections, close all HTML tags, and finish completely."
+                            "content": f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Complete all remaining sections and close all HTML tags."
                         }
                     ]
                     cont_payload = {
@@ -1493,7 +1521,9 @@ You MUST deliver all 4 sections in this exact order:
                     model_name="gemini-3.6-flash",
                     location_id=location_id,
                     access_token=access_token,
-                    history=history
+                    history=history,
+                    intent=intent,
+                    attachments=attachments
                 )
                 return
             yield {"type": "chunk", "text": f"⚠️ **Timeout:** {provider_name} server took too long to respond. Please try again."}
@@ -1512,7 +1542,9 @@ You MUST deliver all 4 sections in this exact order:
                     model_name="gemini-3.6-flash",
                     location_id=location_id,
                     access_token=access_token,
-                    history=history
+                    history=history,
+                    intent=intent,
+                    attachments=attachments
                 )
                 return
             yield {"type": "chunk", "text": f"⚠️ **{provider_name} Execution Error:** {str(e)}"}

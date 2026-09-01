@@ -70,7 +70,7 @@ class GHLSubAccountClient:
         try:
             res = requests.post(url, headers=self._get_headers(), json=payload, timeout=12)
             if res.status_code in [200, 201]:
-                return {"success": True, "data": res.json(), "message": f"✅ Contact '{first_name} {last_name}'.strip() created successfully."}
+                return {"success": True, "data": res.json(), "message": f"✅ Contact '{(first_name + ' ' + last_name).strip()}' created successfully."}
             else:
                 err_detail = res.json().get("message", res.text)
                 return {"success": False, "error": f"HTTP {res.status_code}: {err_detail}"}
@@ -165,14 +165,16 @@ class GHLSubAccountClient:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def create_custom_field(self, name: str, data_type: str = "TEXT") -> Dict[str, Any]:
+    def create_custom_field(self, name: str, data_type: str = "TEXT", options: Optional[List[str]] = None) -> Dict[str, Any]:
         """Create a Custom Field (TEXT, NUMBER, SINGLE_OPTIONS, etc.) in GHL."""
         url = f"{self.BASE_URL}/locations/{self.location_id}/custom-fields"
-        payload = {
+        payload: Dict[str, Any] = {
             "name": name,
             "dataType": data_type.upper(),
             "placeholder": f"Enter {name}"
         }
+        if options and data_type.upper() in ["SINGLE_OPTIONS", "MULTIPLE_OPTIONS", "RADIO", "CHECKBOX"]:
+            payload["options"] = options
         try:
             res = requests.post(url, headers=self._get_headers(), json=payload, timeout=10)
             if res.status_code in [200, 201]:
@@ -275,7 +277,11 @@ class GHLSubAccountClient:
 
         # 1. Create Custom Fields
         for field in GYM_CUSTOM_FIELDS_SCHEMA:
-            res = self.create_custom_field(name=field["name"], data_type=field.get("dataType", "TEXT"))
+            res = self.create_custom_field(
+                name=field["name"],
+                data_type=field.get("dataType", "TEXT"),
+                options=field.get("options")
+            )
             if res.get("success"):
                 created_fields += 1
             else:

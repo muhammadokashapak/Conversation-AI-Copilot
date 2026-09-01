@@ -220,6 +220,7 @@ class GeminiKeyPool:
                     "masked": f"{k[:12]}...{k[-4:]}",
                     "is_active": True,
                     "is_depleted": False,
+                    "depleted_at": 0,
                     "last_status_code": 200,
                     "last_error": "",
                     "success_count": 0,
@@ -230,12 +231,23 @@ class GeminiKeyPool:
             logger.info(f"GeminiKeyPool initialized with {len(self.keys_state)} keys.")
 
     def get_active_key(self) -> Optional[str]:
-        """Returns the currently active, healthy Gemini key from the pool."""
+        """Returns the currently active, healthy Gemini key from the pool. Auto-recovers keys after cooldown."""
         with self._lock:
             if not self.keys_state:
                 return None
             
+            now = time.time()
             n = len(self.keys_state)
+            
+            # Auto-recover keys depleted more than 65 seconds ago (RPM cooldown)
+            for entry in self.keys_state:
+                if entry["is_depleted"] and entry.get("depleted_at", 0) > 0:
+                    elapsed = now - entry["depleted_at"]
+                    if elapsed > 65:  # RPM limits reset within ~60s
+                        entry["is_depleted"] = False
+                        entry["last_error"] = ""
+                        logger.info(f"Gemini key {entry['masked']} auto-recovered after {elapsed:.0f}s cooldown.")
+            
             for i in range(n):
                 idx = (self._current_index + i) % n
                 entry = self.keys_state[idx]
@@ -251,11 +263,12 @@ class GeminiKeyPool:
             return self.keys_state[0]["key"]
 
     def mark_key_depleted(self, key: str, status_code: int = 429, error_msg: str = ""):
-        """Marks a specific Gemini key as depleted/rate-limited and shifts pointer."""
+        """Marks a specific Gemini key as depleted/rate-limited and shifts pointer. Records timestamp for auto-recovery."""
         with self._lock:
             for entry in self.keys_state:
                 if entry["key"] == key:
                     entry["is_depleted"] = True
+                    entry["depleted_at"] = time.time()
                     entry["last_status_code"] = status_code
                     entry["last_error"] = error_msg
                     entry["failure_count"] += 1
