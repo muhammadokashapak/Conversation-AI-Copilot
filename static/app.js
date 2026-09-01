@@ -313,8 +313,8 @@ document.addEventListener('DOMContentLoaded', () => {
         attachmentsPreview.classList.remove('hidden');
         attachmentsPreview.innerHTML = pendingAttachments.map((att, idx) => {
             const isImg = att.type === 'image' || (att.mime_type && att.mime_type.startsWith('image/'));
-            const thumbHtml = isImg ? 
-                `<img src="${att.data}" class="att-thumb" alt="${escapeHtml(att.name)}">` : 
+            const thumbHtml = isImg ?
+                `<img src="${att.data}" class="att-thumb" alt="${escapeHtml(att.name)}">` :
                 `<span class="att-icon">${getFileIcon(att.name)}</span>`;
 
             return `
@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (rest && rest.length > 5) {
                     try {
                         trailingMarkdown = `<div class="agent-markdown-text" style="margin-top: 18px;">${marked.parse(rest)}</div>`;
-                    } catch(e) {
+                    } catch (e) {
                         trailingMarkdown = `<div class="agent-markdown-text" style="margin-top: 18px;">${escapeHtml(rest)}</div>`;
                     }
                 }
@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const meta = getArtifactMeta(rawLang, cleanCode);
             const artifactId = 'art_' + Math.random().toString(36).substring(2, 9);
-            
+
             window.activeArtifacts[artifactId] = {
                 id: artifactId,
                 title: meta.filename,
@@ -669,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check if HTML for live preview tab
         if (art.lang === 'html' || art.code.includes('<html') || art.code.includes('<!DOCTYPE')) {
             if (artifactTabsPill) artifactTabsPill.classList.remove('hidden');
-            
+
             let previewHtml = art.code;
             // If code contains placeholder GHL calendar iframe that fails in local sandbox,
             // replace with a beautiful interactive glassmorphic calendar mockup for preview!
@@ -709,8 +709,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 `;
                 previewHtml = previewHtml.replace(/<iframe[^>]*api\.leadconnectorhq\.com[^>]*>.*?<\/iframe>/gis, calendarMockup)
-                                         .replace(/<iframe[^>]*YOUR_CALENDAR_ID[^>]*>.*?<\/iframe>/gis, calendarMockup)
-                                         .replace(/<iframe[^>]*leadconnectorhq\.com[^>]*><\/iframe>/gis, calendarMockup);
+                    .replace(/<iframe[^>]*YOUR_CALENDAR_ID[^>]*>.*?<\/iframe>/gis, calendarMockup)
+                    .replace(/<iframe[^>]*leadconnectorhq\.com[^>]*><\/iframe>/gis, calendarMockup);
             }
 
             // Inject Live Preview form submit & calendar click interceptor
@@ -1183,11 +1183,11 @@ document.addEventListener('DOMContentLoaded', () => {
         clearPromptQueue();
         currentThreadId = 'thread_' + Date.now();
         localStorage.setItem('ghl_active_thread_id', currentThreadId);
-        
+
         messagesList.innerHTML = '';
         if (welcomeScreen) welcomeScreen.classList.remove('hidden');
         if (activeChatTitle) activeChatTitle.textContent = 'Conversation AI Copilot';
-        
+
         if (userInput) {
             userInput.value = '';
             userInput.style.height = 'auto';
@@ -1287,7 +1287,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const effectiveId = messageId || ('msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
         const existingIdx = thread.messages ? thread.messages.findIndex(m => m.id === effectiveId) : -1;
-        
+
         if (existingIdx !== -1) {
             thread.messages[existingIdx].content = content;
             thread.messages[existingIdx].toolBadges = toolBadges;
@@ -1429,20 +1429,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 categories[cat].push(m);
             });
 
-            const savedModel = localStorage.getItem('selected_ai_model') || data.default_model || 'gemini-3.6-flash';
+            const rawSaved = localStorage.getItem('selected_ai_model');
+            const modelExists = models.some(m => m.id === rawSaved);
+            const savedModel = modelExists ? rawSaved : (data.default_model || 'qwen/qwen3.8-27b');
+            localStorage.setItem('selected_ai_model', savedModel);
             modelSelector.innerHTML = '';
 
             const iconsMap = {
-                'Google Gemini': '✨',
                 'Groq Ultra-Fast': '⚡',
-                'xAI Grok & DeepSeek': '🧠',
-                'Free Tier Models': '🎁',
-                'Flagship Models': '👑'
+                'Other Models': '🔹'
             };
 
             for (const [catName, catModels] of Object.entries(categories)) {
                 const optGroup = document.createElement('optgroup');
-                optGroup.label = `${iconsMap[catName] || '🔹'} ${catName}`;
+                optGroup.label = `${iconsMap[catName] || '⚡'} ${catName}`;
                 catModels.forEach(m => {
                     const opt = document.createElement('option');
                     opt.value = m.id;
@@ -3497,8 +3497,8 @@ document.addEventListener('DOMContentLoaded', () => {
         brandSection += `\n- Primary Brand Color: ${brandColor}`;
         if (brandLogo) brandSection += `\n- Logo URL: ${brandLogo}`;
 
-        const compiledPrompt = isFunnel ? 
-`Build a complete GoHighLevel Multi-Step High-Converting Funnel and CRM Architecture for a ${cleanNiche} business.
+        const compiledPrompt = isFunnel ?
+            `Build a complete GoHighLevel Multi-Step High-Converting Funnel and CRM Architecture for a ${cleanNiche} business.
 
 Configuration:
 - Asset Type: Multi-Step Conversion Funnel (Opt-in ➔ VSL ➔ Booking/Checkout ➔ Upsell ➔ Thank You)
@@ -3508,8 +3508,8 @@ Configuration:
 - Connected Automations & Drop-off Recovery: ${automations.join(', ')}${brandSection}
 
 Please provide the complete multi-step funnel architecture, step-by-step URLs/pages, production-ready responsive HTML/CSS code for each step, HighLevel Pipeline stages taxonomy, Contact Custom Fields & Tags schema, and 2-step abandoned cart / drop-off Workflow automations.`
-:
-`Build a complete GoHighLevel High-Converting Landing Page and CRM Architecture for a ${cleanNiche} business.
+            :
+            `Build a complete GoHighLevel High-Converting Landing Page and CRM Architecture for a ${cleanNiche} business.
 
 Configuration:
 - Asset Type: Single High-Converting Landing Page
@@ -3733,7 +3733,7 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
         const lower = prompt.toLowerCase().trim();
         const isFromWizard = prompt.includes('custom wizard specifications:') || prompt.includes('Configuration:');
         const isGenericBuild = !isFromWizard && (
-            /^(build|create|make|design|generate)\s+(me\s+)?(a\s+)?(landing\s*page|website|funnel|crm\s*setup|lead\s*page)[\s\.\?!]*$/i.test(lower) || 
+            /^(build|create|make|design|generate)\s+(me\s+)?(a\s+)?(landing\s*page|website|funnel|crm\s*setup|lead\s*page)[\s\.\?!]*$/i.test(lower) ||
             /^(landing\s*page|funnel)\s*(bana\s*do|bna\s*do|create\s*kro|build\s*kro)[\s\.\?!]*$/i.test(lower) ||
             lower.startsWith('make me a funnel') ||
             lower.startsWith('create a funnel') ||
@@ -3971,7 +3971,7 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                     prompt: prompt,
                     location_id: ghlConfig.locationId,
                     access_token: ghlConfig.accessToken,
-                    selected_model: modelSelector ? modelSelector.value : 'gemini-3.6-flash',
+                    selected_model: modelSelector ? modelSelector.value : 'qwen/qwen3.8-27b',
                     history: history,
                     attachments: currentAttachments
                 })
@@ -4020,14 +4020,14 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                                 resultBadge.className = isSuccess ? 'tool-execution-badge success' : 'tool-execution-badge error';
                                 const errMsg = data.result.error || data.result.message || 'Action failed';
                                 const isAuthErr = !isSuccess && (errMsg.includes('Location ID') || errMsg.includes('Token') || errMsg.includes('401') || errMsg.includes('404'));
-                                
-                                resultBadge.innerHTML = isSuccess ? 
-                                    `✅ Action Executed: ${data.result.message || 'Asset Created'}` : 
+
+                                resultBadge.innerHTML = isSuccess ?
+                                    `✅ Action Executed: ${data.result.message || 'Asset Created'}` :
                                     `❌ Action Failed: ${errMsg} ${isAuthErr ? '<button type="button" class="connect-ghl-btn inline-connect-trigger" style="margin-left: 10px; font-size: 11px; padding: 3px 10px;">Connect Location</button>' : ''}`;
-                                
+
                                 botBodyEl.appendChild(resultBadge);
                                 recordedBadges.push({ type: 'tool_result', text: resultBadge.innerHTML, isSuccess: isSuccess });
-                                
+
                                 const inlineTrigger = resultBadge.querySelector('.inline-connect-trigger');
                                 if (inlineTrigger) {
                                     inlineTrigger.addEventListener('click', openGhlModal);
@@ -4084,13 +4084,13 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
             attachmentsHtml = `
                 <div class="user-attachments-grid">
                     ${attachments.map(att => {
-                        const isImg = att.type === 'image' || (att.mime_type && att.mime_type.startsWith('image/'));
-                        if (isImg) {
-                            return `<img src="${att.data}" class="user-att-preview-img" alt="${escapeHtml(att.name)}" title="${escapeHtml(att.name)}" onclick="window.open('${att.data}', '_blank')">`;
-                        } else {
-                            return `<div class="user-att-doc-pill"><span>${getFileIcon(att.name)}</span> <span>${escapeHtml(att.name)}</span></div>`;
-                        }
-                    }).join('')}
+                const isImg = att.type === 'image' || (att.mime_type && att.mime_type.startsWith('image/'));
+                if (isImg) {
+                    return `<img src="${att.data}" class="user-att-preview-img" alt="${escapeHtml(att.name)}" title="${escapeHtml(att.name)}" onclick="window.open('${att.data}', '_blank')">`;
+                } else {
+                    return `<div class="user-att-doc-pill"><span>${getFileIcon(att.name)}</span> <span>${escapeHtml(att.name)}</span></div>`;
+                }
+            }).join('')}
                 </div>
             `;
         }
@@ -4119,7 +4119,7 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
             if (isLong) {
                 const expandBtn = msgWrap.querySelector('.user-prompt-expand-btn');
                 const promptTextEl = msgWrap.querySelector('.user-prompt-text');
-                
+
                 const toggleExpand = (e) => {
                     if (e) e.stopPropagation();
                     const isCurrentlyCollapsed = promptTextEl.classList.contains('is-collapsed');
@@ -4234,12 +4234,9 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
         }
         chatContainer.scrollTop = 0;
     }
-
-
     function escapeHtml(text) {
         if (!text) return '';
         const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
         return String(text).replace(/[&<>"']/g, m => map[m]);
     }
 });
-

@@ -69,7 +69,7 @@ class AgentChatRequest(BaseModel):
     prompt: str
     location_id: Optional[str] = ""
     access_token: Optional[str] = ""
-    selected_model: Optional[str] = "gemini-3.6-flash"
+    selected_model: Optional[str] = "qwen/qwen3.8-27b"
     history: Optional[List[Dict[str, Any]]] = []
     attachments: Optional[List[AttachmentItem]] = []
 
@@ -85,15 +85,13 @@ async def health_check():
         "service": "Conversation AI Copilot",
         "port": 7861,
         "providers": {
-            "gemini": bool(keys["gemini"] and keys["gemini"] != "YOUR_GEMINI_API_KEY_HERE"),
-            "groq": bool(keys["groq"] and keys["groq"] != "YOUR_GROQ_API_KEY_HERE"),
-            "openrouter": bool(keys["openrouter"] and keys["openrouter"] != "YOUR_OPENROUTER_API_KEY_HERE")
+            "groq": bool(keys["groq"] and keys["groq"] != "YOUR_GROQ_API_KEY_HERE")
         }
     }
 
 @app.get("/api/models")
 async def get_models_catalog():
-    """Returns the list of all available AI models categorized by provider with live usage statistics."""
+    """Returns the list of all available Groq AI models with live usage statistics."""
     keys = get_server_keys()
     enriched_models = []
     
@@ -106,11 +104,9 @@ async def get_models_catalog():
     return {
         "models": enriched_models,
         "active_providers": {
-            "gemini": bool(keys["gemini"]),
-            "groq": bool(keys["groq"]),
-            "openrouter": bool(keys["openrouter"])
+            "groq": bool(keys["groq"])
         },
-        "default_model": "gemini-3.6-flash"
+        "default_model": "qwen/qwen3.8-27b"
     }
 
 @app.get("/api/usage-stats")

@@ -272,82 +272,34 @@ def detect_truncation(text: str) -> bool:
 
     return False
 
-# Complete Model Catalog categorized by Provider
+# Groq Cloud Ultra-Fast Models Catalog (Exclusive API Engine)
 MODELS_CATALOG = [
-    # Google Gemini Models
-    {
-        "id": "gemini-3.6-flash",
-        "name": "Gemini 3.6 Flash (Recommended)",
-        "provider": "gemini",
-        "category": "Google Gemini",
-        "badge": "Fast & Smart",
-        "supports_tools": True,
-        "description": "Latest state-of-the-art multimodal model with native function calling and ultra-fast speed."
-    },
-    {
-        "id": "gemini-3.7-flash",
-        "name": "Gemini 3.7 Flash",
-        "provider": "gemini",
-        "category": "Google Gemini",
-        "badge": "Advanced Reasoning",
-        "supports_tools": True,
-        "description": "Next-generation hybrid reasoning model for high precision CRM tasks."
-    },
-    {
-        "id": "gemini-3.5-flash",
-        "name": "Gemini 3.5 Flash",
-        "provider": "gemini",
-        "category": "Google Gemini",
-        "badge": "High Speed",
-        "supports_tools": True,
-        "description": "Optimized for quick turnaround CRM tasks and automated workflows."
-    },
-    {
-        "id": "gemini-flash-latest",
-        "name": "Gemini Flash Latest",
-        "provider": "gemini",
-        "category": "Google Gemini",
-        "badge": "High Speed",
-        "supports_tools": True,
-        "description": "Optimized for quick turnaround CRM tasks and automated workflows."
-    },
-    {
-        "id": "gemini-pro-latest",
-        "name": "Gemini Pro Latest",
-        "provider": "gemini",
-        "category": "Google Gemini",
-        "badge": "Deep Reasoning",
-        "supports_tools": True,
-        "description": "High-capacity reasoning engine for complex multi-step CRM setups."
-    },
-    {
-        "id": "gemini-3.1-pro-preview",
-        "name": "Gemini 3.1 Pro Preview",
-        "provider": "gemini",
-        "category": "Google Gemini",
-        "badge": "Flagship Pro",
-        "supports_tools": True,
-        "description": "Next-generation flagship reasoning engine for complex architectural workflows."
-    },
-
-    # Groq Cloud Ultra-Fast Models
     {
         "id": "qwen/qwen3.8-27b",
-        "name": "Groq Qwen 3.8 27B",
+        "name": "Groq Qwen 3.8 27B (Recommended)",
         "provider": "groq",
         "category": "Groq Ultra-Fast",
-        "badge": "Tools Enabled",
+        "badge": "⚡ Ultra-Fast LPU",
         "supports_tools": True,
-        "description": "Lightning-fast execution on Groq LPU with robust tool calling."
+        "description": "Lightning-fast execution on Groq LPU with full GHL function calling and high-density code generation."
     },
     {
         "id": "qwen/qwen3.6-27b",
         "name": "Groq Qwen 3.6 27B",
         "provider": "groq",
         "category": "Groq Ultra-Fast",
-        "badge": "Ultra Low Latency",
+        "badge": "Low Latency",
         "supports_tools": True,
         "description": "High-throughput model tuned for real-time CRM chat."
+    },
+    {
+        "id": "openai/gpt-oss-120b",
+        "name": "Groq GPT-OSS 120B",
+        "provider": "groq",
+        "category": "Groq Ultra-Fast",
+        "badge": "High Capacity",
+        "supports_tools": True,
+        "description": "Large-scale reasoning model hosted on Groq LPU."
     },
     {
         "id": "openai/gpt-oss-20b",
@@ -356,7 +308,7 @@ MODELS_CATALOG = [
         "category": "Groq Ultra-Fast",
         "badge": "Fast Inference",
         "supports_tools": True,
-        "description": "Compact open-source foundation model hosted on Groq."
+        "description": "Compact foundation model hosted on Groq."
     },
     {
         "id": "allam-2-7b",
@@ -366,129 +318,6 @@ MODELS_CATALOG = [
         "badge": "Bilingual",
         "supports_tools": False,
         "description": "Fast conversational engine with Arabic & English multilingual support."
-    },
-
-    # OpenRouter - xAI Grok & DeepSeek Models
-    {
-        "id": "x-ai/grok-4.6",
-        "name": "xAI Grok 4.6",
-        "provider": "openrouter",
-        "category": "xAI Grok & DeepSeek",
-        "badge": "Flagship Grok",
-        "supports_tools": True,
-        "description": "Direct Grok reasoning engine from xAI via OpenRouter."
-    },
-    {
-        "id": "x-ai/grok-4.5",
-        "name": "xAI Grok 4.5",
-        "provider": "openrouter",
-        "category": "xAI Grok & DeepSeek",
-        "badge": "Grok Engine",
-        "supports_tools": True,
-        "description": "Powerful conversational model by xAI with real-world knowledge."
-    },
-    {
-        "id": "x-ai/grok-4.3",
-        "name": "xAI Grok 4.3",
-        "provider": "openrouter",
-        "category": "xAI Grok & DeepSeek",
-        "badge": "Grok Fast",
-        "supports_tools": True,
-        "description": "High speed Grok variant for instantaneous replies."
-    },
-    {
-        "id": "deepseek/deepseek-v4-flash",
-        "name": "DeepSeek V4 Flash",
-        "provider": "openrouter",
-        "category": "xAI Grok & DeepSeek",
-        "badge": "DeepSeek AI",
-        "supports_tools": True,
-        "description": "Next-gen DeepSeek V4 architecture with blazing fast speeds."
-    },
-    {
-        "id": "deepseek/deepseek-v4-pro",
-        "name": "DeepSeek V4 Pro",
-        "provider": "openrouter",
-        "category": "xAI Grok & DeepSeek",
-        "badge": "DeepSeek Pro",
-        "supports_tools": True,
-        "description": "Deep reasoning and code generation for intricate marketing flows."
-    },
-    {
-        "id": "deepseek/deepseek-v3.2",
-        "name": "DeepSeek V3.2",
-        "provider": "openrouter",
-        "category": "xAI Grok & DeepSeek",
-        "badge": "Versatile",
-        "supports_tools": True,
-        "description": "Standard high-performance DeepSeek model."
-    },
-
-    # OpenRouter - Free Tier Models
-    {
-        "id": "inclusionai/ling-3.0-flash-fin:free",
-        "name": "Ling 3.0 Flash (Free)",
-        "provider": "openrouter",
-        "category": "Free Tier Models",
-        "badge": "100% Free",
-        "supports_tools": False,
-        "description": "Free-to-use conversational AI for planning and strategy generation."
-    },
-    {
-        "id": "dots-studio/dots-3-note-preview:free",
-        "name": "Dots 3 Note Preview (Free)",
-        "provider": "openrouter",
-        "category": "Free Tier Models",
-        "badge": "100% Free",
-        "supports_tools": False,
-        "description": "Lightweight free model for quick copy, text summaries, and email drafts."
-    },
-    {
-        "id": "liquid/lfm-2.5-2.6b:free",
-        "name": "Liquid LFM 2.5 (Free)",
-        "provider": "openrouter",
-        "category": "Free Tier Models",
-        "badge": "100% Free",
-        "supports_tools": False,
-        "description": "Efficient free-tier model by Liquid AI."
-    },
-
-    # OpenRouter - Flagship AI Models
-    {
-        "id": "anthropic/claude-3.5-sonnet",
-        "name": "Claude 3.5 Sonnet",
-        "provider": "openrouter",
-        "category": "Flagship Models",
-        "badge": "Top Coder & Agent",
-        "supports_tools": True,
-        "description": "Industry leader in nuanced reasoning, CRM architecture, and code."
-    },
-    {
-        "id": "openai/gpt-4o",
-        "name": "OpenAI GPT-4o",
-        "provider": "openrouter",
-        "category": "Flagship Models",
-        "badge": "Omni Model",
-        "supports_tools": True,
-        "description": "Flagship OpenAI model with native tool calling."
-    },
-    {
-        "id": "openai/gpt-4o-mini",
-        "name": "OpenAI GPT-4o Mini",
-        "provider": "openrouter",
-        "category": "Flagship Models",
-        "badge": "Fast & Economical",
-        "supports_tools": True,
-        "description": "Lightweight, highly capable OpenAI model for rapid operations."
-    },
-    {
-        "id": "meta-llama/llama-3.3-70b-instruct",
-        "name": "Meta Llama 3.3 70B",
-        "provider": "openrouter",
-        "category": "Flagship Models",
-        "badge": "Open Source Leader",
-        "supports_tools": True,
-        "description": "Meta's flagship open-weights model fine-tuned for instructions and tools."
     }
 ]
 
@@ -662,21 +491,8 @@ def get_openai_tools_schema() -> List[Dict[str, Any]]:
 
 
 def detect_provider(model_name: str) -> str:
-    """Detects provider from model slug."""
-    model_name = (model_name or "").strip().lower()
-    for item in MODELS_CATALOG:
-        if item["id"].lower() == model_name:
-            return item["provider"]
-    
-    if model_name.startswith("gemini-"):
-        return "gemini"
-    if model_name.startswith(("qwen/", "allam-", "openai/gpt-oss", "groq/", "canopylabs/")):
-        return "groq"
-    if any(model_name.startswith(p) for p in ["x-ai/", "deepseek/", "openai/", "anthropic/", "meta-llama/", "inclusionai/", "dots-studio/", "liquid/", "nvidia/", "google/"]):
-        return "openrouter"
-    if "/" in model_name:
-        return "openrouter"
-    return "gemini"
+    """Exclusively uses Groq Cloud API."""
+    return "groq"
 
 
 def stream_text_tokens(text: str) -> Generator[Dict[str, Any], None, None]:
@@ -697,31 +513,28 @@ def stream_text_tokens(text: str) -> Generator[Dict[str, Any], None, None]:
 
 class GHLAgentExecutionEngine:
     """
-    Universal Multi-Provider AI Action Execution Engine for GoHighLevel.
-    Supports Google Gemini, Groq Cloud, and OpenRouter (xAI Grok, DeepSeek, Claude, GPT-4o, etc.).
+    Dedicated High-Performance AI Action Execution Engine for GoHighLevel powered exclusively by Groq Cloud LPU.
     """
     def __init__(self, gemini_key: str = "", groq_key: str = "", openrouter_key: str = ""):
         self.gemini_key = gemini_key.strip()
         self.groq_key = groq_key.strip()
         self.openrouter_key = openrouter_key.strip()
-        
-        # Initialize Google GenAI Client if key provided
-        self.gemini_client = genai.Client(api_key=self.gemini_key) if self.gemini_key else None
+        self.gemini_client = None
 
     def execute_agent_prompt(
         self,
         prompt: str,
         location_id: str,
         access_token: str,
-        model_name: str = "gemini-3.6-flash",
+        model_name: str = "qwen/qwen3.8-27b",
         history: Optional[List[Dict[str, str]]] = None,
         attachments: Optional[List[Dict[str, Any]]] = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Processes prompt with conversation history, determines tool calls, executes GHL API commands, and yields SSE stream updates.
+        Processes prompt via Groq Cloud API, determines tool calls, executes GHL API commands, and yields SSE stream updates.
         Supports multimodal attachments (images, PDFs, documents, code).
         """
-        provider = detect_provider(model_name)
+        provider = "groq"
         ghl = GHLSubAccountClient(location_id=location_id, access_token=access_token)
         
         # Check connection status first if credentials provided
@@ -737,62 +550,27 @@ class GHLAgentExecutionEngine:
 
         # Classify prompt intent for adaptive configuration
         intent = classify_prompt_intent(prompt)
-        logger.info(f"Prompt intent classified as: {intent} | Provider: {provider} | Model: {model_name} | Attachments: {len(attachments or [])}")
+        effective_model = model_name if model_name and any(k in model_name for k in ["qwen", "groq", "oss", "allam"]) else "qwen/qwen3.8-27b"
+        logger.info(f"Prompt intent classified as: {intent} | Provider: Groq Cloud | Model: {effective_model} | Attachments: {len(attachments or [])}")
 
         # Build adaptive system prompt based on intent, provider, and portfolio context
-        system_instruction = self._build_system_prompt(intent, provider, is_ghl_connected, location_id, prompt=prompt)
+        system_instruction = self._build_system_prompt(intent, "groq", is_ghl_connected, location_id, prompt=prompt)
 
-        if provider == "gemini":
-            yield from self._execute_gemini(
-                prompt=prompt,
-                ghl=ghl,
-                is_ghl_connected=is_ghl_connected,
-                system_instruction=system_instruction,
-                model_name=model_name,
-                location_id=location_id,
-                access_token=access_token,
-                history=history,
-                intent=intent,
-                attachments=attachments
-            )
-        elif provider == "groq":
-            yield from self._execute_openai_compatible(
-                prompt=prompt,
-                ghl=ghl,
-                is_ghl_connected=is_ghl_connected,
-                system_instruction=system_instruction,
-                model_name=model_name,
-                api_url="https://api.groq.com/openai/v1/chat/completions",
-                api_key=self.groq_key,
-                provider_name="Groq Cloud",
-                location_id=location_id,
-                access_token=access_token,
-                history=history,
-                intent=intent,
-                attachments=attachments
-            )
-        elif provider == "openrouter":
-            yield from self._execute_openai_compatible(
-                prompt=prompt,
-                ghl=ghl,
-                is_ghl_connected=is_ghl_connected,
-                system_instruction=system_instruction,
-                model_name=model_name,
-                api_url="https://openrouter.ai/api/v1/chat/completions",
-                api_key=self.openrouter_key,
-                provider_name="OpenRouter",
-                location_id=location_id,
-                access_token=access_token,
-                history=history,
-                intent=intent,
-                attachments=attachments,
-                extra_headers={
-                    "HTTP-Referer": "http://127.0.0.1:7861",
-                    "X-Title": "Conversation AI Copilot"
-                }
-            )
-        else:
-            yield {"type": "chunk", "text": f"⚠️ **Unsupported Provider:** {provider}"}
+        yield from self._execute_openai_compatible(
+            prompt=prompt,
+            ghl=ghl,
+            is_ghl_connected=is_ghl_connected,
+            system_instruction=system_instruction,
+            model_name=effective_model,
+            api_url="https://api.groq.com/openai/v1/chat/completions",
+            api_key=self.groq_key,
+            provider_name="Groq Cloud",
+            location_id=location_id,
+            access_token=access_token,
+            history=history,
+            intent=intent,
+            attachments=attachments
+        )
 
     def _build_system_prompt(self, intent: str, provider: str, is_ghl_connected: bool, location_id: str, prompt: str = "") -> str:
         """
@@ -1380,60 +1158,17 @@ TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
                 
                 logger.warning(f"{provider_name} API Error ({resp.status_code}): {err_msg}")
                 
-                # If OpenRouter fails with 401/402/429/500, seamlessly failover to Groq Cloud (Free high speed LPU)
-                if is_openrouter and self.groq_key and (resp.status_code in [401, 402, 429, 500, 502, 503] or "credits" in err_msg.lower()):
-                    logger.info("OpenRouter credit exhausted. Seamlessly routing to Groq Cloud...")
-                    yield {
-                        "type": "chunk",
-                        "text": "> ℹ️ **Notice:** OpenRouter credits depleted. Seamlessly switching to **Groq Cloud (Qwen 3.8 27B)**...\n\n---\n\n"
-                    }
-                    yield from self._execute_openai_compatible(
-                        prompt=prompt,
-                        ghl=ghl,
-                        is_ghl_connected=is_ghl_connected,
-                        system_instruction=system_instruction,
-                        model_name="qwen/qwen3.8-27b",
-                        api_url="https://api.groq.com/openai/v1/chat/completions",
-                        api_key=self.groq_key,
-                        provider_name="Groq Cloud",
-                        location_id=location_id,
-                        access_token=access_token,
-                        history=history,
-                        intent=intent,
-                        is_fallback=True
-                    )
-                    return
-
-                # If Groq returns 413/429, failover to OpenRouter
-                if not is_openrouter and (resp.status_code in [413, 429] or "too large" in err_msg.lower() or "limit 8000" in err_msg.lower()):
-                    from key_pool_manager import openrouter_key_pool
-                    pool_key = openrouter_key_pool.get_active_key()
-                    if pool_key:
-                        logger.info("Groq returned 413/429. Seamlessly shifting to OpenRouter Key Pool...")
-                        yield from self._execute_openai_compatible(
-                            prompt=prompt,
-                            ghl=ghl,
-                            is_ghl_connected=is_ghl_connected,
-                            system_instruction=system_instruction,
-                            model_name="meta-llama/llama-3.3-70b-instruct",
-                            api_url="https://openrouter.ai/api/v1/chat/completions",
-                            api_key=pool_key,
-                            provider_name="OpenRouter",
-                            location_id=location_id,
-                            access_token=access_token,
-                            history=history,
-                            intent=intent,
-                            is_fallback=True
-                        )
-                        return
-
-                # If all retries and failovers fail, display a clean, friendly error banner
+            if resp.status_code != 200:
+                err_body = resp.text
+                try:
+                    err_json = resp.json()
+                    err_msg = err_json.get("error", {}).get("message", err_body)
+                except Exception:
+                    err_msg = err_body
+                
+                logger.warning(f"Groq API Error ({resp.status_code}): {err_msg}")
                 yield {"type": "chunk", "text": format_friendly_error_banner(err_msg)}
                 return
-
-            if is_openrouter:
-                from key_pool_manager import openrouter_key_pool
-                openrouter_key_pool.record_success(active_key)
 
             if not can_call_tools:
                 # Direct streaming from OpenRouter / Groq SSE stream with Auto-Continuation
