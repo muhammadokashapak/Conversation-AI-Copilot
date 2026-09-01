@@ -223,6 +223,40 @@ body {
     pointer-events: none;
 }
 
+/* Sidebar Toggle Button (3 lines hamburger) */
+.sidebar-toggle-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* Hide 3-lines hamburger icon when sidebar is OPEN */
+.sidebar:not(.closed) ~ .main-content .sidebar-toggle-btn {
+    display: none !important;
+}
+
+/* Show 3-lines hamburger icon when sidebar is COLLAPSED / CLOSED */
+.sidebar.closed ~ .main-content .sidebar-toggle-btn {
+    display: inline-flex !important;
+}
+
+
 .sidebar-header {
     width: var(--sidebar-width);
     padding: 16px;
@@ -3312,14 +3346,17 @@ body.dark-theme .agent-markdown-text code:not(pre code) {
 .chat-options-dropdown {
     position: absolute;
     top: calc(100% + 6px);
-    left: 0;
-    min-width: 190px;
+    right: 0 !important;
+    left: auto !important;
+    min-width: 200px;
+    max-width: calc(100vw - 24px);
     background: var(--card-bg, #1e293b);
     border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
     border-radius: 10px;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
     padding: 6px;
     z-index: 1000;
+    transform-origin: top right;
     animation: fadeInScale 0.15s ease-out;
 }
 

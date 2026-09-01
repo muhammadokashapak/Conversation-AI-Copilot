@@ -32,26 +32,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sidebar Toggle & Overlay Logic
     function toggleSidebar() {
         if (!sidebar) return;
-        sidebar.classList.toggle('open');
-        if (sidebarOverlay) {
-            const isOpen = sidebar.classList.contains('open');
-            sidebarOverlay.classList.toggle('active', isOpen);
-            sidebarOverlay.classList.toggle('hidden', !isOpen);
+        if (sidebar.classList.contains('closed')) {
+            openSidebar();
+        } else {
+            closeSidebar();
         }
+    }
+
+    function openSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.remove('closed');
+        if (sidebarOverlay) {
+            if (window.innerWidth <= 768) {
+                sidebarOverlay.classList.add('active');
+                sidebarOverlay.classList.remove('hidden');
+            }
+        }
+        localStorage.setItem('sidebar_closed', 'false');
     }
 
     function closeSidebar() {
         if (!sidebar) return;
-        sidebar.classList.remove('open');
+        sidebar.classList.add('closed');
         if (sidebarOverlay) {
             sidebarOverlay.classList.remove('active');
             sidebarOverlay.classList.add('hidden');
         }
+        localStorage.setItem('sidebar_closed', 'true');
     }
 
     if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', toggleSidebar);
     if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+
 
     // DOM Elements - Usage Monitor Modal
     const usageModal = document.getElementById('usage-monitor-modal');
