@@ -880,126 +880,93 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
             stream_started = False
             last_err_text = ""
             accumulated_text = ""
-            current_client = genai.Client(api_key=active_gemini_key)
+            
+            num_keys = len(gemini_key_pool.keys_state) or 1
+            for key_attempt in range(num_keys):
+                active_gemini_key = gemini_key_pool.get_active_key() or self.gemini_key
+                if not active_gemini_key:
+                    break
+                current_client = genai.Client(api_key=active_gemini_key)
 
-            for mod in candidate_models:
-                try:
-                    config_args = {
-                        "system_instruction": system_instruction,
-                        "temperature": temp,
-                        "max_output_tokens": max_toks
-                    }
-                    if "3.7" in mod or "think" in mod:
-                        try:
-                            config_args["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_toks)
-                        except Exception:
-                            pass
-
-                    response_stream = current_client.models.generate_content_stream(
-                        model=mod,
-                        contents=contents,
-                        config=types.GenerateContentConfig(**config_args)
-                    )
-                    for chunk in response_stream:
-                        if chunk.text:
-                            stream_started = True
-                            accumulated_text += chunk.text
-                            yield {"type": "chunk", "text": chunk.text}
-
-                    # Multi-Pass Seamless Auto-Continuation for Gemini
-                    # OPTIMIZED: Don't resend original prompt — only tail + instruction
-                    max_gemini_cont = 3
-                    while stream_started and detect_truncation(accumulated_text) and max_gemini_cont > 0:
-                        max_gemini_cont -= 1
-                        logger.info(f"Gemini output truncated (len={len(accumulated_text)}). Auto-triggering seamless continuation {3 - max_gemini_cont}/3...")
-                        try:
-                            recent_tail = accumulated_text[-2400:]
-                            last_cutoff = accumulated_text[-80:].replace('\n', ' ')
-                            cont_contents = [
-                                types.Content(role="model", parts=[types.Part.from_text(text=recent_tail)]),
-                                types.Content(role="user", parts=[types.Part.from_text(text=f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Complete all remaining sections and close all HTML tags.")])
-                            ]
-                            cont_config = {
-                                "temperature": temp,
-                                "max_output_tokens": max_toks
-                            }
-                            cont_stream = current_client.models.generate_content_stream(
-                                model=mod,
-                                contents=cont_contents,
-                                config=types.GenerateContentConfig(**cont_config)
-                            )
-                            for c_chunk in cont_stream:
-                                if c_chunk.text:
-                                    accumulated_text += c_chunk.text
-                                    yield {"type": "chunk", "text": c_chunk.text}
-                        except Exception as e_cont:
-                            logger.warning(f"Gemini auto-continuation error on key {active_gemini_key[:8]}: {e_cont}")
-                            if "429" in str(e_cont) or "RESOURCE_EXHAUSTED" in str(e_cont):
-                                gemini_key_pool.mark_key_depleted(active_gemini_key, 429, str(e_cont))
-                                next_k = gemini_key_pool.get_active_key()
-                                if next_k and next_k != active_gemini_key:
-                                    active_gemini_key = next_k
-                                    current_client = genai.Client(api_key=active_gemini_key)
-                                    continue
-                            break
-
-                    if accumulated_text.count('```') % 2 != 0:
-                        yield {"type": "chunk", "text": "\n```\n"}
-
-                    gemini_key_pool.record_success(active_gemini_key)
-                    return
-                except Exception as e_mod:
-                    if stream_started:
-                        return
-                    last_err_text = str(e_mod)
-                    logger.warning(f"Gemini streaming with {mod} on key {active_gemini_key[:8]} failed: {e_mod}")
-                    if "429" in last_err_text or "RESOURCE_EXHAUSTED" in last_err_text or "quota" in last_err_text.lower():
-                        gemini_key_pool.mark_key_depleted(active_gemini_key, 429, last_err_text)
-                        next_gemini_key = gemini_key_pool.get_active_key()
-                        if next_gemini_key and next_gemini_key != active_gemini_key:
-                            logger.info(f"Shifting Gemini key pool to next key: {next_gemini_key[:8]}...")
-                            active_gemini_key = next_gemini_key
-                            current_client = genai.Client(api_key=active_gemini_key)
-                            continue
-                        break
-                    if "pro" in mod.lower() or "3.7" in mod.lower():
-                        continue
-
-            # Failover logic: Try OpenRouter Key Pool first, then Groq Cloud if Gemini is rate-limited / exhausted
-            if not is_fallback:
-                has_images = any(a.get("type") == "image" or str(a.get("mime_type", "")).startswith("image/") for a in (attachments or []))
-                if self.openrouter_key:
-                    from key_pool_manager import openrouter_key_pool
-                    pool_key = openrouter_key_pool.get_active_key()
-                    if pool_key:
-                        logger.info("Gemini limit reached. Seamlessly failing over to OpenRouter (Llama 3.3 70B)...")
-                        yield {
-                            "type": "chunk",
-                            "text": "> ℹ️ **Notice:** Google Gemini quota is currently full/rate-limited. Seamlessly routing your request to **OpenRouter (Llama 3.3 70B / Multi-Key Pool)**...\n\n---\n\n"
+                for mod in candidate_models:
+                    try:
+                        config_args = {
+                            "system_instruction": system_instruction,
+                            "temperature": temp,
+                            "max_output_tokens": max_toks
                         }
-                        yield from self._execute_openai_compatible(
-                            prompt=prompt,
-                            ghl=ghl,
-                            is_ghl_connected=is_ghl_connected,
-                            system_instruction=system_instruction,
-                            model_name="meta-llama/llama-3.3-70b-instruct",
-                            api_url="https://openrouter.ai/api/v1/chat/completions",
-                            api_key=pool_key,
-                            provider_name="OpenRouter",
-                            location_id=location_id,
-                            access_token=access_token,
-                            history=history,
-                            intent=intent,
-                            is_fallback=True,
-                            attachments=attachments
+                        if "3.7" in mod or "think" in mod:
+                            try:
+                                config_args["thinking_config"] = types.ThinkingConfig(thinking_budget=thinking_toks)
+                            except Exception:
+                                pass
+
+                        response_stream = current_client.models.generate_content_stream(
+                            model=mod,
+                            contents=contents,
+                            config=types.GenerateContentConfig(**config_args)
                         )
+                        for chunk in response_stream:
+                            if chunk.text:
+                                stream_started = True
+                                accumulated_text += chunk.text
+                                yield {"type": "chunk", "text": chunk.text}
+
+                        # Multi-Pass Seamless Auto-Continuation for Gemini
+                        max_gemini_cont = 3
+                        while stream_started and detect_truncation(accumulated_text) and max_gemini_cont > 0:
+                            max_gemini_cont -= 1
+                            logger.info(f"Gemini output truncated (len={len(accumulated_text)}). Auto-triggering seamless continuation {3 - max_gemini_cont}/3...")
+                            try:
+                                recent_tail = accumulated_text[-2400:]
+                                last_cutoff = accumulated_text[-80:].replace('\n', ' ')
+                                cont_contents = [
+                                    types.Content(role="model", parts=[types.Part.from_text(text=recent_tail)]),
+                                    types.Content(role="user", parts=[types.Part.from_text(text=f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Complete all remaining sections and close all HTML tags.")])
+                                ]
+                                cont_config = {
+                                    "temperature": temp,
+                                    "max_output_tokens": max_toks
+                                }
+                                cont_stream = current_client.models.generate_content_stream(
+                                    model=mod,
+                                    contents=cont_contents,
+                                    config=types.GenerateContentConfig(**cont_config)
+                                )
+                                for c_chunk in cont_stream:
+                                    if c_chunk.text:
+                                        accumulated_text += c_chunk.text
+                                        yield {"type": "chunk", "text": c_chunk.text}
+                            except Exception as e_cont:
+                                logger.warning(f"Gemini auto-continuation error on key {active_gemini_key[:8]}: {e_cont}")
+                                if "429" in str(e_cont) or "RESOURCE_EXHAUSTED" in str(e_cont):
+                                    gemini_key_pool.mark_key_depleted(active_gemini_key, 429, str(e_cont))
+                                break
+
+                        if accumulated_text.count('```') % 2 != 0:
+                            yield {"type": "chunk", "text": "\n```\n"}
+
+                        gemini_key_pool.record_success(active_gemini_key)
                         return
-                elif self.groq_key:
+                    except Exception as e_mod:
+                        if stream_started:
+                            return
+                        last_err_text = str(e_mod)
+                        logger.warning(f"Gemini streaming with {mod} on key {active_gemini_key[:8]} failed: {e_mod}")
+                        if "429" in last_err_text or "RESOURCE_EXHAUSTED" in last_err_text or "quota" in last_err_text.lower():
+                            gemini_key_pool.mark_key_depleted(active_gemini_key, 429, last_err_text)
+                            break  # Shift to next key in outer loop
+                        if "pro" in mod.lower() or "3.7" in mod.lower():
+                            continue
+
+            # Failover logic: Groq Cloud first (verified available), then OpenRouter
+            if not is_fallback:
+                if self.groq_key:
                     groq_target = "qwen/qwen3.8-27b"
-                    logger.info("Falling back from Gemini stream to Groq Cloud...")
+                    logger.info("Falling back from Gemini to Groq Cloud...")
                     yield {
                         "type": "chunk",
-                        "text": "> ℹ️ **Notice:** Google Gemini is currently rate-limited. Seamlessly switching to high-capacity **Groq Cloud** to complete your request...\n\n---\n\n"
+                        "text": "> ℹ️ **Notice:** Google Gemini daily free quota reached on active pool. Seamlessly switching to high-capacity **Groq Cloud (Qwen 3.8)** to complete your request...\n\n---\n\n"
                     }
                     yield from self._execute_openai_compatible(
                         prompt=prompt,
@@ -1312,10 +1279,9 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
                     recent_tail = accumulated_text[-2400:]
                     last_cutoff = accumulated_text[-80:].replace('\n', ' ')
                     cont_messages = [
-                        {"role": "assistant", "content": recent_tail},
                         {
                             "role": "user",
-                            "content": f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Complete all remaining sections and close all HTML tags."
+                            "content": f"The response was cut off at: '{last_cutoff}'.\n\nRecent context:\n```\n...{recent_tail}\n```\n\nContinue generating EXACTLY from that point. Do NOT repeat any previous text. Complete all remaining sections, close all HTML tags, and finish completely."
                         }
                     ]
                     cont_payload = {
