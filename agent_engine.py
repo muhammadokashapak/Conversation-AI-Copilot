@@ -280,16 +280,55 @@ def detect_truncation(text: str) -> bool:
 
     return False
 
-# Groq Cloud Ultra-Fast Models Catalog (Exclusive API Engine)
+# AI Models Catalog categorized by Provider
 MODELS_CATALOG = [
+    # Google Gemini Models (Active Key Pool)
+    {
+        "id": "gemini-3.6-flash",
+        "name": "Gemini 3.6 Flash (Recommended)",
+        "provider": "gemini",
+        "category": "Google Gemini",
+        "badge": "✨ Multimodal & Tools",
+        "supports_tools": True,
+        "description": "Latest state-of-the-art multimodal Gemini model with native GHL function calling and high speed."
+    },
+    {
+        "id": "gemini-3.7-flash",
+        "name": "Gemini 3.7 Flash",
+        "provider": "gemini",
+        "category": "Google Gemini",
+        "badge": "Advanced Reasoning",
+        "supports_tools": True,
+        "description": "Hybrid reasoning model for high precision CRM workflows and complex multi-step automations."
+    },
+    {
+        "id": "gemini-3.5-flash",
+        "name": "Gemini 3.5 Flash",
+        "provider": "gemini",
+        "category": "Google Gemini",
+        "badge": "High Speed",
+        "supports_tools": True,
+        "description": "Optimized for quick turnaround CRM tasks and automated workflows."
+    },
+    {
+        "id": "gemini-flash-latest",
+        "name": "Gemini Flash Latest",
+        "provider": "gemini",
+        "category": "Google Gemini",
+        "badge": "High Speed",
+        "supports_tools": True,
+        "description": "Latest general-purpose Gemini Flash model."
+    },
+
+    # Groq Cloud Ultra-Fast Models
     {
         "id": "groq/compound-mini",
-        "name": "Groq Compound Mini (Recommended)",
+        "name": "Groq Compound Mini",
         "provider": "groq",
         "category": "Groq Ultra-Fast",
         "badge": "⚡ 70k TPM Ultra",
         "supports_tools": True,
-        "description": "High-throughput Groq Compound model with ~70k TPM capacity for massive multi-step funnels and code builds."
+        "description": "High-throughput Groq Compound model with ~70k TPM capacity for massive multi-step funnels."
     },
     {
         "id": "groq/compound",
@@ -298,7 +337,7 @@ MODELS_CATALOG = [
         "category": "Groq Ultra-Fast",
         "badge": "🧠 Flagship Reasoning",
         "supports_tools": True,
-        "description": "Full-capacity Groq Compound architecture for deep architectural logic and CRM automations."
+        "description": "Full-capacity Groq Compound architecture for deep architectural logic."
     },
     {
         "id": "qwen/qwen3.8-27b",
@@ -517,7 +556,13 @@ def get_openai_tools_schema() -> List[Dict[str, Any]]:
 
 
 def detect_provider(model_name: str) -> str:
-    """Exclusively uses Groq Cloud API."""
+    """Detects provider from model slug."""
+    model_name = (model_name or "").strip().lower()
+    for item in MODELS_CATALOG:
+        if item["id"].lower() == model_name:
+            return item["provider"]
+    if model_name.startswith("gemini-"):
+        return "gemini"
     return "groq"
 
 
@@ -539,28 +584,28 @@ def stream_text_tokens(text: str) -> Generator[Dict[str, Any], None, None]:
 
 class GHLAgentExecutionEngine:
     """
-    Dedicated High-Performance AI Action Execution Engine for GoHighLevel powered exclusively by Groq Cloud LPU.
+    High-Performance AI Action Execution Engine for GoHighLevel supporting Google Gemini and Groq Cloud LPU.
     """
     def __init__(self, gemini_key: str = "", groq_key: str = "", openrouter_key: str = ""):
         self.gemini_key = gemini_key.strip()
         self.groq_key = groq_key.strip()
         self.openrouter_key = openrouter_key.strip()
-        self.gemini_client = None
+        self.gemini_client = genai.Client(api_key=self.gemini_key) if self.gemini_key else None
 
     def execute_agent_prompt(
         self,
         prompt: str,
         location_id: str,
         access_token: str,
-        model_name: str = "groq/compound-mini",
+        model_name: str = "gemini-3.6-flash",
         history: Optional[List[Dict[str, str]]] = None,
         attachments: Optional[List[Dict[str, Any]]] = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Processes prompt via Groq Cloud API, determines tool calls, executes GHL API commands, and yields SSE stream updates.
+        Processes prompt via Gemini or Groq Cloud API, determines tool calls, executes GHL API commands, and yields SSE stream updates.
         Supports multimodal attachments (images, PDFs, documents, code).
         """
-        provider = "groq"
+        provider = detect_provider(model_name)
         ghl = GHLSubAccountClient(location_id=location_id, access_token=access_token)
         
         # Check connection status first if credentials provided
@@ -576,27 +621,40 @@ class GHLAgentExecutionEngine:
 
         # Classify prompt intent for adaptive configuration
         intent = classify_prompt_intent(prompt)
-        effective_model = model_name if model_name and any(k in model_name for k in ["compound", "qwen", "groq", "oss", "allam"]) else "groq/compound-mini"
-        logger.info(f"Prompt intent classified as: {intent} | Provider: Groq Cloud | Model: {effective_model} | Attachments: {len(attachments or [])}")
+        logger.info(f"Prompt intent classified as: {intent} | Provider: {provider} | Model: {model_name} | Attachments: {len(attachments or [])}")
 
         # Build adaptive system prompt based on intent, provider, and portfolio context
-        system_instruction = self._build_system_prompt(intent, "groq", is_ghl_connected, location_id, prompt=prompt)
+        system_instruction = self._build_system_prompt(intent, provider, is_ghl_connected, location_id, prompt=prompt)
 
-        yield from self._execute_openai_compatible(
-            prompt=prompt,
-            ghl=ghl,
-            is_ghl_connected=is_ghl_connected,
-            system_instruction=system_instruction,
-            model_name=effective_model,
-            api_url="https://api.groq.com/openai/v1/chat/completions",
-            api_key=self.groq_key,
-            provider_name="Groq Cloud",
-            location_id=location_id,
-            access_token=access_token,
-            history=history,
-            intent=intent,
-            attachments=attachments
-        )
+        if provider == "gemini":
+            yield from self._execute_gemini(
+                prompt=prompt,
+                ghl=ghl,
+                is_ghl_connected=is_ghl_connected,
+                system_instruction=system_instruction,
+                model_name=model_name or "gemini-3.6-flash",
+                location_id=location_id,
+                access_token=access_token,
+                history=history,
+                intent=intent,
+                attachments=attachments
+            )
+        else:
+            yield from self._execute_openai_compatible(
+                prompt=prompt,
+                ghl=ghl,
+                is_ghl_connected=is_ghl_connected,
+                system_instruction=system_instruction,
+                model_name=model_name or "groq/compound-mini",
+                api_url="https://api.groq.com/openai/v1/chat/completions",
+                api_key=self.groq_key,
+                provider_name="Groq Cloud",
+                location_id=location_id,
+                access_token=access_token,
+                history=history,
+                intent=intent,
+                attachments=attachments
+            )
 
     def _build_system_prompt(self, intent: str, provider: str, is_ghl_connected: bool, location_id: str, prompt: str = "") -> str:
         """

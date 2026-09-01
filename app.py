@@ -85,13 +85,14 @@ async def health_check():
         "service": "Conversation AI Copilot",
         "port": 7861,
         "providers": {
+            "gemini": bool(keys["gemini"] and keys["gemini"] != "YOUR_GEMINI_API_KEY_HERE"),
             "groq": bool(keys["groq"] and keys["groq"] != "YOUR_GROQ_API_KEY_HERE")
         }
     }
 
 @app.get("/api/models")
 async def get_models_catalog():
-    """Returns the list of all available Groq AI models with live usage statistics."""
+    """Returns the list of all available AI models with live usage statistics."""
     keys = get_server_keys()
     enriched_models = []
     
@@ -104,9 +105,10 @@ async def get_models_catalog():
     return {
         "models": enriched_models,
         "active_providers": {
+            "gemini": bool(keys["gemini"]),
             "groq": bool(keys["groq"])
         },
-        "default_model": "groq/compound-mini"
+        "default_model": "gemini-3.6-flash"
     }
 
 @app.get("/api/usage-stats")

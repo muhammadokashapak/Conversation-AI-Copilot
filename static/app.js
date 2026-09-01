@@ -1436,6 +1436,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modelSelector.innerHTML = '';
 
             const iconsMap = {
+                'Google Gemini': '✨',
                 'Groq Ultra-Fast': '⚡',
                 'Other Models': '🔹'
             };
