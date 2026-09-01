@@ -254,19 +254,28 @@ def compress_history(
 def detect_truncation(text: str) -> bool:
     """
     Detects if a response was likely truncated mid-generation.
-    Checks for unclosed code fences, mid-sentence cutoffs, etc.
+    Checks for unclosed HTML applications, unclosed code fences, mid-tag cutoffs, etc.
     """
     if not text or len(text) < 100:
         return False
+
+    # Check if an HTML application was started but not closed
+    if "<!DOCTYPE html" in text or "<html" in text:
+        if "</html>" not in text:
+            return True
 
     # Check for unclosed markdown code fences
     fence_count = text.count('```')
     if fence_count % 2 != 0:
         return True
 
+    clean_end = text.strip()
+    if clean_end.endswith(('<', '=', '"', "'", '(', '{', '[', ':', ',')):
+        return True
+
     # Check if text ends mid-sentence (no terminal punctuation in last 80 chars)
-    last_segment = text.strip()[-80:]
-    if last_segment and not any(last_segment.rstrip().endswith(c) for c in '.!?|]`\n>*'):
+    last_segment = clean_end[-80:]
+    if last_segment and not any(last_segment.endswith(c) for c in ('.', '!', '?', '|', ']', '`', '>', '*')):
         return True
 
     return False
@@ -705,16 +714,15 @@ TASK DIRECTIVE: ITERATIVE MODIFICATION & REFINEMENT
 TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 =============================================================================
 - Output the complete, enterprise-grade architecture with executive formatting.
-- Structure the delivery into 4 crisp, high-impact sections:
-  1. 🗺️ Funnel Step Map & URLs (Markdown Table)
-  2. 📊 HighLevel Pipeline Stages, Custom Fields & Tags (Compact Markdown Tables)
-  3. ⚡ Connected Drop-off Recovery Workflows (Crisp Action Blocks)
-  4. 🚀 Complete Single-File Interactive HTML/CSS/JS Funnel Application (````html <!DOCTYPE html> ... </html> ````)
-- For the HTML/CSS/JS Application (Section 4):
-  • Use Tailwind CSS CDN (`<script src="https://cdn.tailwindcss.com"></script>`) with compact custom neon accent styles.
-  • NEVER write hundreds of lines of repetitive manual CSS that drains token budgets.
-  • Deliver ALL 5 STEPS (1. Opt-in, 2. VSL with 80% unlock, 3. 2-Step Checkout, 4. Upsell OTO, 5. Thank You) and the complete interactive `<script>` logic in the single code block.
-  • Guarantee the code completes 100% from `<!DOCTYPE html>` down to `</html>``` ` without getting cut off midway.
+- Deliver Section 1 FIRST so the complete interactive code artifact is 100% built and rendered immediately:
+  1. 🚀 Complete Single-File Interactive HTML/CSS/JS Funnel Application (````html <!DOCTYPE html> ... </html> ````)
+     • Use Tailwind CSS CDN (`<script src="https://cdn.tailwindcss.com"></script>`) with utility classes directly on HTML elements.
+     • NEVER write custom `<style>` blocks or separate CSS rules (this wastes tokens).
+     • Deliver ALL 5 STEPS (1. Opt-in, 2. VSL with 80% unlock, 3. 2-Step Checkout, 4. Upsell OTO, 5. Thank You) and complete interactive JavaScript navigation in the single block.
+     • Guarantee the code completes 100% from `<!DOCTYPE html>` down to `</html>``` ` without stopping midway.
+  2. 🗺️ Funnel Step Map & URLs (Compact Markdown Table)
+  3. 📊 HighLevel Pipeline Stages, Custom Fields & Tags (Compact Markdown Tables)
+  4. ⚡ Connected Drop-off Recovery Workflows (Crisp Action Blocks)
 - DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
 {tool_block}
 """
