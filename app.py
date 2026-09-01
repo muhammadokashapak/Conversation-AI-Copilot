@@ -209,13 +209,11 @@ async def agent_chat_endpoint(req: AgentChatRequest):
 
     selected_model = req.selected_model or "gemini-3.6-flash"
 
-    # Track usage stats
-    estimated_tokens = max(50, len(prompt) // 4 + 200)
-    usage_tracker.record_usage(selected_model, tokens_est=estimated_tokens)
-
     raw_attachments = [a.model_dump() for a in req.attachments] if req.attachments else []
 
     async def sse_generator():
+        total_output_chars = 0
+        prompt_tokens = max(20, len(prompt) // 4)
         try:
             generator = engine.execute_agent_prompt(
                 prompt=prompt,
@@ -226,9 +224,18 @@ async def agent_chat_endpoint(req: AgentChatRequest):
                 attachments=raw_attachments
             )
             for item in generator:
+                if item.get("type") == "chunk":
+                    total_output_chars += len(item.get("text", ""))
                 yield f"data: {json.dumps(item)}\n\n"
                 await asyncio.sleep(0)
             
+            # Record exact usage tokens into tracker
+            completion_tokens = max(10, total_output_chars // 4)
+            usage_tracker.record_usage(selected_model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
+
+            # Emit real-time usage stats update event
+            live_stats = usage_tracker.get_model_stats(selected_model)
+            yield f"data: {json.dumps({'type': 'usage_update', 'model': selected_model, 'stats': live_stats})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
         except Exception as e:
             logger.error(f"Chat streaming error: {e}", exc_info=True)

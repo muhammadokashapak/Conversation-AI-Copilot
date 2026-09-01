@@ -1448,8 +1448,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 catModels.forEach(m => {
                     const opt = document.createElement('option');
                     opt.value = m.id;
-                    const usagePct = (m.usage && m.usage.usage_percentage !== undefined) ? m.usage.usage_percentage : 0;
-                    opt.textContent = `${m.name} (${usagePct}% Used • ${m.badge})`;
+                    const u = m.usage;
+                    let statLabel = m.badge;
+                    if (u && u.current_minute_tokens > 0) {
+                        statLabel = `${u.tpm_usage_pct}% TPM Load`;
+                    } else if (u && u.badge_capacity) {
+                        statLabel = u.badge_capacity;
+                    }
+                    opt.textContent = `${m.name} (${statLabel})`;
                     if (m.id === savedModel) {
                         opt.selected = true;
                     }
@@ -1476,11 +1482,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentModelId = modelSelector.value;
         const currentModel = cachedModelsData.find(m => m.id === currentModelId);
         if (currentModel && currentModel.usage) {
-            const usagePct = currentModel.usage.usage_percentage || 0;
-            const remainingPct = currentModel.usage.remaining_percentage || 100;
-            activeModelUsagePill.textContent = `${currentModel.name.split(' ')[0]}: ${usagePct}% Used (${remainingPct}% Left)`;
+            const u = currentModel.usage;
+            const healthColor = u.health_color || '#10b981';
+            activeModelUsagePill.style.color = healthColor;
+            activeModelUsagePill.style.borderColor = `${healthColor}44`;
+            if (u.current_minute_tokens > 0) {
+                activeModelUsagePill.textContent = `⚡ ${currentModel.name.split(' ')[0]}: ${u.current_minute_tokens.toLocaleString()} / ${u.tpm_limit.toLocaleString()} TPM (${u.tpm_usage_pct}% Load)`;
+            } else {
+                activeModelUsagePill.textContent = `⚡ ${currentModel.name.split(' ')[0]}: 0 TPM Active (${u.badge_capacity || '100% Ready'})`;
+            }
         }
     }
+
+    // Auto-refresh models usage every 10s for live TPM cooldown and accuracy
+    setInterval(() => {
+        fetchModelsCatalog();
+    }, 10000);
 
     // Usage Modal Handlers
     if (openUsageModalBtn) openUsageModalBtn.addEventListener('click', openUsageModal);
@@ -1502,20 +1519,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!usageModelsGrid) return;
         const currentModelId = modelSelector ? modelSelector.value : '';
         usageModelsGrid.innerHTML = cachedModelsData.map(m => {
-            const usage = m.usage || { usage_percentage: 0, remaining_percentage: 100, daily_requests: 0, daily_limit: 100, daily_tokens: 0, status: 'Healthy' };
+            const usage = m.usage || { usage_percentage: 0, remaining_percentage: 100, daily_requests: 0, daily_limit: 100, daily_tokens: 0, current_minute_tokens: 0, tpm_limit: 70000, status: '100% Ready' };
             const isActive = m.id === currentModelId;
             const usagePct = usage.usage_percentage || 0;
-            const barColor = usagePct < 60 ? '#10b981' : (usagePct < 85 ? '#f59e0b' : '#ef4444');
+            const barColor = usage.health_color || (usagePct < 60 ? '#10b981' : (usagePct < 85 ? '#f59e0b' : '#ef4444'));
 
             return `
                 <div class="usage-model-card ${isActive ? 'active-model' : ''}">
                     <div class="usage-card-top">
                         <div class="usage-model-info">
                             <h4>${escapeHtml(m.name)}</h4>
-                            <span class="usage-model-cat">${escapeHtml(m.category)} • <strong>${escapeHtml(m.badge)}</strong></span>
+                            <span class="usage-model-cat">${escapeHtml(m.category)} • <strong>${escapeHtml(usage.badge_capacity || m.badge)}</strong></span>
                         </div>
                         <span class="badge" style="background-color: ${barColor}22; color: ${barColor}; border: 1px solid ${barColor}55;">
-                            ${usagePct}% Used
+                            ${escapeHtml(usage.status || `${usagePct}% Load`)}
                         </span>
                     </div>
 
@@ -1524,13 +1541,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="usage-progress-bar-fill" style="width: ${Math.max(2, usagePct)}%; background-color: ${barColor};"></div>
                         </div>
                         <div class="usage-stats-meta">
-                            <span>Reqs: ${usage.daily_requests || 0} / ${usage.daily_limit || 200}</span>
-                            <span>Remaining: ${usage.remaining_percentage || 100}%</span>
+                            <span>Live TPM: ${(usage.current_minute_tokens || 0).toLocaleString()} / ${(usage.tpm_limit || 70000).toLocaleString()}</span>
+                            <span>Daily Reqs: ${usage.daily_requests || 0} / ${usage.daily_limit || 1000}</span>
                         </div>
                     </div>
 
                     <div class="usage-card-actions">
-                        <span style="font-size: 11px; color: var(--text-muted);">Est. Tokens: ${usage.daily_tokens || 0}</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">Total Tokens: ${(usage.total_tokens || 0).toLocaleString()}</span>
                         <button type="button" class="select-model-btn ${isActive ? 'active' : ''}" data-model-id="${escapeHtml(m.id)}">
                             ${isActive ? '✓ Active Model' : 'Switch Model'}
                         </button>
@@ -4036,6 +4053,14 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                                 }
                             } else if (data.type === 'chunk') {
                                 enqueueIncomingChunk(data.text || '');
+                            } else if (data.type === 'usage_update') {
+                                if (data.model && data.stats) {
+                                    const modelObj = cachedModelsData.find(m => m.id === data.model);
+                                    if (modelObj) {
+                                        modelObj.usage = data.stats;
+                                        updateActiveModelUsageDisplay();
+                                    }
+                                }
                             } else if (data.type === 'done') {
                                 isStreamDone = true;
                             }
