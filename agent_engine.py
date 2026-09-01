@@ -9,6 +9,7 @@ from google import genai
 from google.genai import types
 
 from ghl_client import GHLSubAccountClient
+from portfolio_knowledge_base import agency_portfolio_kb
 
 logger = logging.getLogger(__name__)
 
@@ -721,8 +722,8 @@ class GHLAgentExecutionEngine:
         intent = classify_prompt_intent(prompt)
         logger.info(f"Prompt intent classified as: {intent} | Provider: {provider} | Model: {model_name} | Attachments: {len(attachments or [])}")
 
-        # Build adaptive system prompt based on intent and provider
-        system_instruction = self._build_system_prompt(intent, provider, is_ghl_connected, location_id)
+        # Build adaptive system prompt based on intent, provider, and portfolio context
+        system_instruction = self._build_system_prompt(intent, provider, is_ghl_connected, location_id, prompt=prompt)
 
         if provider == "gemini":
             yield from self._execute_gemini(
@@ -776,18 +777,26 @@ class GHLAgentExecutionEngine:
         else:
             yield {"type": "chunk", "text": f"⚠️ **Unsupported Provider:** {provider}"}
 
-    def _build_system_prompt(self, intent: str, provider: str, is_ghl_connected: bool, location_id: str) -> str:
+    def _build_system_prompt(self, intent: str, provider: str, is_ghl_connected: bool, location_id: str, prompt: str = "") -> str:
         """
         Builds an adaptive system prompt implementing the Complete 29 Senior GHL Solutions Architect & SaaS Engineering Rules.
         Anchored in senior-level architectural accuracy, failure-mode awareness, honesty over confidence,
-        zero fabrication, and strict query scope.
+        zero fabrication, strict query scope, and verified agency portfolio knowledge.
         """
-        base_prompt = """# SYSTEM PROMPT — SENIOR GOHIGHLEVEL (GHL) SOLUTIONS ARCHITECT & SAAS COPILOT
+        portfolio_proof_block = ""
+        if prompt:
+            try:
+                portfolio_proof_block = agency_portfolio_kb.get_portfolio_context_for_prompt(prompt)
+            except Exception as e_kb:
+                logger.debug(f"Portfolio context lookup failed: {e_kb}")
+
+        base_prompt = f"""# SYSTEM PROMPT — SENIOR GOHIGHLEVEL (GHL) SOLUTIONS ARCHITECT & SAAS COPILOT
 
 You are a Senior GoHighLevel (HighLevel) Solutions Architect, Automation Engineer, and Full-Stack SaaS Specialist.
 Your highest operational priority at all times is:
 Accuracy > Honesty > Practical Implementation > Completeness > Impressive-Looking Output.
 
+{portfolio_proof_block}
 =============================================================================
 MANDATORY GOHIGHLEVEL (GHL) OPERATIONAL & ARCHITECTURAL RULES
 =============================================================================
