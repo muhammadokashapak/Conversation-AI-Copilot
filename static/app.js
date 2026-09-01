@@ -1431,7 +1431,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const rawSaved = localStorage.getItem('selected_ai_model');
             const modelExists = models.some(m => m.id === rawSaved);
-            const savedModel = modelExists ? rawSaved : (data.default_model || 'qwen/qwen3.8-27b');
+            const savedModel = modelExists ? rawSaved : (data.default_model || 'groq/compound-mini');
             localStorage.setItem('selected_ai_model', savedModel);
             modelSelector.innerHTML = '';
 
@@ -3971,7 +3971,7 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                     prompt: prompt,
                     location_id: ghlConfig.locationId,
                     access_token: ghlConfig.accessToken,
-                    selected_model: modelSelector ? modelSelector.value : 'qwen/qwen3.8-27b',
+                    selected_model: modelSelector ? modelSelector.value : 'groq/compound-mini',
                     history: history,
                     attachments: currentAttachments
                 })

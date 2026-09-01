@@ -148,19 +148,18 @@ def format_friendly_error_banner(reason: str = "") -> str:
 def get_token_budget(provider: str, intent: str) -> int:
     """
     Returns the optimal max_tokens for a given provider × intent combination.
-    Guarantees sufficient token space so full HTML/CSS code blocks and tables are NEVER truncated,
-    while staying strictly within Groq (8000 TPM limit) and OpenRouter credit quotas.
+    Guarantees sufficient token space so full HTML/CSS code blocks and tables are NEVER truncated.
     """
     budgets = {
-        'gemini': {
+        'groq': {
             'full_build': 8192,
             'iteration': 6000,
             'quick_answer': 4000,
         },
-        'groq': {
-            'full_build': 5200,
-            'iteration': 4000,
-            'quick_answer': 2800,
+        'gemini': {
+            'full_build': 8192,
+            'iteration': 6000,
+            'quick_answer': 4000,
         },
         'openrouter': {
             'full_build': 4000,
@@ -168,7 +167,7 @@ def get_token_budget(provider: str, intent: str) -> int:
             'quick_answer': 1500,
         }
     }
-    return budgets.get(provider, budgets['openrouter']).get(intent, 1500)
+    return budgets.get(provider, budgets['groq']).get(intent, 4000)
 
 
 def get_temperature(intent: str, is_tool_mode: bool = False) -> float:
@@ -275,13 +274,31 @@ def detect_truncation(text: str) -> bool:
 # Groq Cloud Ultra-Fast Models Catalog (Exclusive API Engine)
 MODELS_CATALOG = [
     {
-        "id": "qwen/qwen3.8-27b",
-        "name": "Groq Qwen 3.8 27B (Recommended)",
+        "id": "groq/compound-mini",
+        "name": "Groq Compound Mini (Recommended)",
         "provider": "groq",
         "category": "Groq Ultra-Fast",
-        "badge": "⚡ Ultra-Fast LPU",
+        "badge": "⚡ 70k TPM Ultra",
         "supports_tools": True,
-        "description": "Lightning-fast execution on Groq LPU with full GHL function calling and high-density code generation."
+        "description": "High-throughput Groq Compound model with ~70k TPM capacity for massive multi-step funnels and code builds."
+    },
+    {
+        "id": "groq/compound",
+        "name": "Groq Compound Flagship",
+        "provider": "groq",
+        "category": "Groq Ultra-Fast",
+        "badge": "🧠 Flagship Reasoning",
+        "supports_tools": True,
+        "description": "Full-capacity Groq Compound architecture for deep architectural logic and CRM automations."
+    },
+    {
+        "id": "qwen/qwen3.8-27b",
+        "name": "Groq Qwen 3.8 27B",
+        "provider": "groq",
+        "category": "Groq Ultra-Fast",
+        "badge": "High Speed",
+        "supports_tools": True,
+        "description": "Lightning-fast execution on Groq LPU with full GHL function calling."
     },
     {
         "id": "qwen/qwen3.6-27b",
@@ -526,7 +543,7 @@ class GHLAgentExecutionEngine:
         prompt: str,
         location_id: str,
         access_token: str,
-        model_name: str = "qwen/qwen3.8-27b",
+        model_name: str = "groq/compound-mini",
         history: Optional[List[Dict[str, str]]] = None,
         attachments: Optional[List[Dict[str, Any]]] = None
     ) -> Generator[Dict[str, Any], None, None]:
@@ -550,7 +567,7 @@ class GHLAgentExecutionEngine:
 
         # Classify prompt intent for adaptive configuration
         intent = classify_prompt_intent(prompt)
-        effective_model = model_name if model_name and any(k in model_name for k in ["qwen", "groq", "oss", "allam"]) else "qwen/qwen3.8-27b"
+        effective_model = model_name if model_name and any(k in model_name for k in ["compound", "qwen", "groq", "oss", "allam"]) else "groq/compound-mini"
         logger.info(f"Prompt intent classified as: {intent} | Provider: Groq Cloud | Model: {effective_model} | Attachments: {len(attachments or [])}")
 
         # Build adaptive system prompt based on intent, provider, and portfolio context

@@ -69,7 +69,7 @@ class AgentChatRequest(BaseModel):
     prompt: str
     location_id: Optional[str] = ""
     access_token: Optional[str] = ""
-    selected_model: Optional[str] = "qwen/qwen3.8-27b"
+    selected_model: Optional[str] = "groq/compound-mini"
     history: Optional[List[Dict[str, Any]]] = []
     attachments: Optional[List[AttachmentItem]] = []
 
@@ -106,7 +106,7 @@ async def get_models_catalog():
         "active_providers": {
             "groq": bool(keys["groq"])
         },
-        "default_model": "qwen/qwen3.8-27b"
+        "default_model": "groq/compound-mini"
     }
 
 @app.get("/api/usage-stats")
