@@ -336,10 +336,10 @@ class PortfolioKnowledgeBase:
         """
         matches = self.search_portfolio(prompt, top_k=2)
         if not matches:
-            # Check if query is broadly about past experience / proposals / dashboards / case studies
+            # Check if query is explicitly asking about custom apps / dashboard case studies
             p_lower = prompt.lower()
-            if any(term in p_lower for term in ["proposal", "done with you", "what custom applications", "have you built", "case study", "portfolio", "examples", "past projects", "experience", "dashboard", "analytics", "kpi", "reporting", "facebook", "meta", "portal"]):
-                matches = self.chunks[:2]  # Return primary summaries of both flagship projects
+            if any(term in p_lower for term in ["custom applications", "have you built on top", "dashboard case study", "facebook analytics", "kpi reporting", "pandacare", "xortlogix"]):
+                matches = self.chunks[:2]
             else:
                 return ""
 
@@ -347,8 +347,7 @@ class PortfolioKnowledgeBase:
             "=============================================================================",
             "VERIFIED AGENCY PORTFOLIO & DOCUMENTED PAST PROJECTS PROOF",
             "=============================================================================",
-            "Our development team has personally architected and deployed these verified, documented real-world client projects.",
-            "Cite these authentic case studies, architectures, and tech stacks whenever relevant to prove our real-world capability:",
+            "Our development team has personally architected and deployed these verified, documented real-world client projects:",
             ""
         ]
 
@@ -364,7 +363,7 @@ class PortfolioKnowledgeBase:
             context_lines.append(f"  - Verified Scope & Deliverables: {m.get('text')}")
             context_lines.append("")
 
-        context_lines.append("Use these documented projects as authentic proof when writing proposals or answering technical questions.")
+        context_lines.append("STRICT RELEVANCE RULE: ONLY cite these projects if the user's inquiry directly relates to KPI dashboards, Facebook Ads reporting, or custom external portals. Do NOT force PandaCare or XortLogix as proof for membership portals or unrelated standard GHL tasks.")
         context_lines.append("=============================================================================\n")
         return "\n".join(context_lines)
 
