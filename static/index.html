@@ -212,74 +212,104 @@
                     </div>
                 </div>
 
-                <!-- GHL AI Chat Input Bar -->
+                <!-- GHL AI Chat Input Bar — Premium Floating Island -->
                 <div class="input-area">
-                    <div class="input-box-wrapper" id="input-box-wrapper">
-                        <!-- Quick Action Chips Row -->
-                        <div class="input-quick-chips">
-                            <button type="button" class="chip-btn wizard-trigger-chip" id="open-wizard-chip-btn">🚀 Build Landing Page Wizard</button>
-                            <button type="button" class="chip-btn" data-template="Create a contact named [Name] with email [Email] and tag 'New Lead'">+ Contact</button>
-                            <button type="button" class="chip-btn" data-template="Build a sales pipeline named [Pipeline Name] with stages: New Lead, Contacted, Proposal Sent, Closed Won">+ Pipeline</button>
-                            <button type="button" class="chip-btn" data-template="Create a tag named [Tag Name] in my sub-account">+ Tag</button>
-                            <button type="button" class="chip-btn" data-template="Create a TEXT custom field named [Field Name]">+ Custom Field</button>
-                            <button type="button" class="chip-btn" data-template="Explain how Funnels and Pipelines work in GoHighLevel Sub-Accounts">💡 Explain Funnels</button>
-                        </div>
+                    <!-- Suggestion Chips (Above Input Island) -->
+                    <div class="input-suggestions-row" id="input-suggestions-row">
+                        <button type="button" class="suggestion-chip wizard-chip" id="open-wizard-chip-btn">
+                            <span class="suggestion-chip-icon">🚀</span>
+                            <span>Build Landing Page</span>
+                        </button>
+                        <button type="button" class="suggestion-chip" data-template="Create a contact named [Name] with email [Email] and tag 'New Lead'">
+                            <span class="suggestion-chip-icon">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                            </span>
+                            <span>Contact</span>
+                        </button>
+                        <button type="button" class="suggestion-chip" data-template="Build a sales pipeline named [Pipeline Name] with stages: New Lead, Contacted, Proposal Sent, Closed Won">
+                            <span class="suggestion-chip-icon">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                            </span>
+                            <span>Pipeline</span>
+                        </button>
+                        <button type="button" class="suggestion-chip" data-template="Create a tag named [Tag Name] in my sub-account">
+                            <span class="suggestion-chip-icon">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                            </span>
+                            <span>Tag</span>
+                        </button>
+                        <button type="button" class="suggestion-chip" data-template="Create a TEXT custom field named [Field Name]">
+                            <span class="suggestion-chip-icon">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                            </span>
+                            <span>Custom Field</span>
+                        </button>
+                        <button type="button" class="suggestion-chip" data-template="Explain how Funnels and Pipelines work in GoHighLevel Sub-Accounts">
+                            <span class="suggestion-chip-icon">💡</span>
+                            <span>Explain Funnels</span>
+                        </button>
+                    </div>
 
+                    <!-- Floating Input Island -->
+                    <div class="input-box-wrapper" id="input-box-wrapper">
                         <!-- Attachment Previews Container (Images & Documents) -->
                         <div class="input-attachments-preview hidden" id="input-attachments-preview">
                             <!-- Populated dynamically via JS -->
                         </div>
 
-                        <!-- Regular Chat Controls Bar -->
+                        <!-- Textarea Row -->
                         <div class="input-controls-row" id="input-controls-row">
                             <textarea 
                                 id="user-input" 
                                 class="chat-textarea" 
-                                placeholder="Message HighLevel AI Copilot or upload files/voice..." 
+                                placeholder="Ask anything about GoHighLevel..." 
                                 rows="1"
                             ></textarea>
+                        </div>
 
-                            <div class="input-actions-bottom-row" id="input-actions-bottom-row">
-                                <div class="input-left-buttons">
-                                    <!-- Hidden File Input for Image & Document Upload -->
-                                    <input type="file" id="file-attachment-input" multiple accept="image/*,.pdf,.txt,.csv,.json,.md,.html,.js,.py,.docx" style="display: none;">
+                        <!-- Toolbar Row -->
+                        <div class="input-toolbar" id="input-actions-bottom-row">
+                            <div class="toolbar-left">
+                                <!-- Hidden File Input -->
+                                <input type="file" id="file-attachment-input" multiple accept="image/*,.pdf,.txt,.csv,.json,.md,.html,.js,.py,.docx" style="display: none;">
 
-                                    <!-- Attach File Button -->
-                                    <button type="button" class="input-tool-icon-btn" id="attach-file-btn" title="Attach Image or Document (PNG, JPG, PDF, CSV, TXT, JSON, Code)">
-                                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                                    </button>
+                                <!-- Attach File -->
+                                <button type="button" class="toolbar-icon-btn" id="attach-file-btn" title="Attach file">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                </button>
 
-                                    <!-- Voice Input (Speech to Text) -->
-                                    <button type="button" class="input-tool-icon-btn" id="voice-input-btn" title="Voice Dictation (Speech to Text)">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                    </button>
+                                <!-- Voice Input -->
+                                <button type="button" class="toolbar-icon-btn" id="voice-input-btn" title="Voice input">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                </button>
 
-                                    <!-- ChatGPT-Style Floating Model Selector Pill -->
-                                    <div class="header-model-pill input-model-pill" id="header-model-pill">
-                                        <span class="model-sparkle">✨</span>
-                                        <select id="model-selector" class="header-model-select" title="Select AI Model">
-                                            <option value="gemini-3.6-flash">Gemini 3.6 Flash (Recommended)</option>
-                                        </select>
-                                        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                    </div>
+                                <div class="toolbar-separator"></div>
 
-                                    <!-- Live Model Quota Display Pill -->
-                                    <button type="button" class="input-model-quota-pill" id="input-model-quota-pill" title="Click to view AI Model Quotas & Key Pools">
-                                        <span class="quota-pill-icon">📊</span>
-                                        <span id="input-model-quota-text">Quota: 1M TPM • 5 Keys</span>
-                                    </button>
+                                <!-- Model Selector Pill -->
+                                <div class="model-selector-pill" id="header-model-pill">
+                                    <span class="model-selector-dot"></span>
+                                    <select id="model-selector" class="model-selector-select" title="Select AI Model">
+                                        <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                                    </select>
+                                    <svg class="model-selector-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                 </div>
 
-                                <div class="input-right-buttons">
-                                    <!-- Send Button -->
-                                    <button id="send-btn" class="send-btn" title="Execute Action Prompt" aria-label="Send message" disabled>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                                    </button>
-                                </div>
+                                <!-- Quota Badge -->
+                                <button type="button" class="quota-badge" id="input-model-quota-pill" title="View quotas & key pools">
+                                    <span class="quota-badge-dot" id="quota-badge-dot"></span>
+                                    <span class="quota-badge-text" id="input-model-quota-text">1M TPM • 5 Keys</span>
+                                </button>
+                            </div>
+
+                            <div class="toolbar-right">
+                                <!-- Send Button -->
+                                <button id="send-btn" class="send-btn" title="Send message" aria-label="Send message" disabled>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div class="input-footer-note">HighLevel AI Copilot can make mistakes. Verify important CRM automations, workflows, and API actions.</div>
+                    <div class="input-footer-note">HighLevel AI Copilot may produce inaccurate information. Verify critical CRM actions before executing.</div>
                 </div>
             </div>
 

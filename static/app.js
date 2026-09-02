@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-btn');
     const modelSelector = document.getElementById('model-selector');
     const cardItems = document.querySelectorAll('.card-item');
-    const chipBtns = document.querySelectorAll('.chip-btn');
+    const chipBtns = document.querySelectorAll('.suggestion-chip');
     // DOM Elements - Prompt Queue & Generation Controls
     const stopGeneratingBtn = document.getElementById('stop-generating-btn');
     const promptQueueContainer = document.getElementById('prompt-queue-container');
