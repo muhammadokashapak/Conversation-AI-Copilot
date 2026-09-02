@@ -1,4 +1,4 @@
-﻿# 🤖 Conversation AI Copilot for GoHighLevel (GHL)
+# 🤖 Conversation AI Copilot for GoHighLevel (GHL)
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
@@ -7,71 +7,105 @@
   <img src="https://img.shields.io/badge/Groq%20Cloud-Ultra--Fast-F55036?style=for-the-badge&logo=groq&logoColor=white" alt="Groq" />
   <img src="https://img.shields.io/badge/OpenRouter-Multi--LLM-6366F1?style=for-the-badge" alt="OpenRouter" />
   <img src="https://img.shields.io/badge/GoHighLevel-REST%20API%20v2-FF7A00?style=for-the-badge" alt="GoHighLevel" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
 </p>
 
-> **An autonomous, multi-model AI Action Execution Agent and conversational Copilot for GoHighLevel Sub-Accounts.** Powered by **Google Gemini**, **Groq Cloud (LPU)**, and **OpenRouter (xAI Grok, DeepSeek, Claude 3.5, GPT-4o)** to automate CRM setup, contact management, deal pipelines, and automated multi-channel messaging directly from natural language prompts.
+> **An enterprise-grade, autonomous multi-model AI Action Execution Agent and conversational Copilot for GoHighLevel Sub-Accounts.** Powered by **Google Gemini**, **Groq Cloud (LPU)**, and **OpenRouter**, the system automates CRM configurations, contact creation, deal pipeline construction, custom fields, automated messaging, and vertical funnel generation directly from natural language prompts.
 
 ---
 
-## 🌟 Key Highlights
+## 📚 Complete Documentation Index
 
-- **🧠 Multi-Provider AI Engine**:
-  - **Google Gemini**: Gemini 3.6 Flash, Gemini 3.7 Flash, Gemini 3.5 Flash (Native Tool Calling).
-  - **Groq Cloud**: Qwen 3.8 27B, Qwen 3.6 27B, GPT-OSS 20B (Sub-second LPU Inference & Function Calling).
-  - **OpenRouter Hub**: xAI Grok (Grok 4.6, 4.5), DeepSeek (V4 Flash, V4 Pro, V3.2), Anthropic Claude 3.5 Sonnet, OpenAI GPT-4o, and 100% Free-tier models.
-- **⚡ Full GHL REST API v2 SDK**: Native handlers for Contacts, Pipelines, Deals/Opportunities, Custom Fields, Tags, Tasks, Internal Notes, and Conversations.
-- **📡 Real-Time Streaming SSE**: Server-Sent Events with live execution badges showing step-by-step tool invocation status (`Invoking Tool` ➡️ `Tool Result`).
-- **🎨 Glassmorphic Premium Dark UI**: Dynamic model selector with categorized provider groups (`Google Gemini`, `Groq Ultra-Fast`, `xAI Grok & DeepSeek`, `Free Tier Models`, `Flagship AI`), sub-account connection modal, quick prompt cards, and CRM hubs.
-- **🏗️ Production-Ready Vertical Blueprints**: Complete schema templates for Gym & Fitness Center CRM taxonomy (custom fields, tags, and multi-stage retention pipelines).
+For deep-dive technical references, architectural specs, and deployment manuals:
+
+| Guide | Description |
+| :--- | :--- |
+| 🏛️ [**System Architecture**](docs/ARCHITECTURE.md) | High-level topology, SSE streaming protocol, failover mechanisms, prompt classification, and token management. |
+| 🔌 [**API Reference Manual**](docs/API_REFERENCE.md) | Full specifications for REST endpoints, SSE stream schemas, request/response models, and cURL examples. |
+| 🛠️ [**GoHighLevel Integration Guide**](docs/GHL_INTEGRATION_GUIDE.md) | Sub-Account Private Integrations, OAuth scopes, GHL REST API v2 SDK methods, and vertical CRM blueprints. |
+| 🚀 [**Deployment & Configuration**](docs/DEPLOYMENT_AND_CONFIG.md) | Environment variables, local setup, Railway/Render cloud deployment, Docker, and Nginx reverse proxy. |
 
 ---
 
-## 🏗️ Architecture Overview
+## 🌟 Key Highlights & Capabilities
+
+- **🧠 Multi-Provider AI Engine with Native Tool Calling**:
+  - **Google Gemini**: Gemini 3.6 Flash & Gemini 3.7 Flash with native function calling and multi-million token context.
+  - **Groq Cloud**: Compound Mini & Qwen 3.8 27B running on dedicated LPUs for sub-second responses and automated tool execution.
+  - **OpenRouter Gateway**: Access to xAI Grok, DeepSeek V4, Anthropic Claude 3.5 Sonnet, and free-tier fallback models.
+- **⚡ Full GHL REST API v2 Native SDK**: Direct sub-account operations for Contacts, Pipelines, Deals/Opportunities, Custom Fields, Tags, Tasks, Internal Notes, and Outbound Conversations.
+- **🛡️ Dynamic Key Pool & Self-Healing Resilience**:
+  - Auto-polling of API key health and remaining credits.
+  - Automatic key shifting on `429 (Rate Limit)` or `402 (Payment Required)`.
+  - 65-second automatic cooldown recovery for temporary RPM limit resets.
+- **📡 Server-Sent Events (SSE) Interactive Streaming**:
+  - Step-by-step visual badges (`Invoking Tool` ➡️ `Tool Result`) streamed live to the UI.
+  - Immediate token-by-token rendering with syntax-highlighted code blocks.
+- **📊 Real-Time Token & Quota Tracker**:
+  - Live tracking of daily request limits, daily token counts, and sliding-window TPM/RPM.
+  - Persistent storage in `model_usage.json` with automatic UTC rollover and backup recovery.
+- **📄 Authentic Portfolio RAG System**:
+  - Grounded semantic retrieval engine parsing verified agency case studies from `PDF` and `DOCX` files.
+  - Generates authentic, non-hallucinated case studies, KPI dashboard architectures, and Meta Ads technical proposals.
+- **🎨 Glassmorphic Premium Dark UI**:
+  - Responsive single-page interface with dynamic model selector, quick prompt chips, and sub-account credential manager.
+- **🧙‍♂️ 6-Step Vertical Architecture Wizard**:
+  - Step-by-step guided generator for Niche Selection, Funnel Goals, Landing Page Style, CRM Automations, Brand Customization, and Asset Review.
+- **🏗️ Production-Ready Vertical Blueprints**:
+  - Complete turnkey schema for Gym & Fitness Center CRM taxonomy (14 custom fields, 12 tags, and multi-stage retention pipelines).
+
+---
+
+## 🏗️ System Architecture
 
 ```mermaid
 graph TD
-    A[User / Frontend UI] -->|Prompt + Selected Model| B(FastAPI Server :7861)
-    B -->|User Intent & History| C[GHLAgentExecutionEngine]
-    C -->|Gemini SDK| D[Google Gemini 3.6/3.7]
-    C -->|OpenAI-Compatible Tool API| E[Groq Cloud Engine]
-    C -->|OpenAI-Compatible Tool API| F[OpenRouter xAI Grok / DeepSeek]
-    D & E & F -->|Tool Invocations| C
-    C -->|Execute GHL REST API v2| G[GHLSubAccountClient]
-    G -->|REST Requests Bearer Auth| H[(GoHighLevel Sub-Account)]
-    H -->|API Response / Data| G
-    G -->|Tool Output| C
-    C -->|Stream SSE Progress & Badges| A
+    A[User / Glassmorphic UI] -->|Natural Language Prompt| B(FastAPI Server :7861)
+    B -->|Intent Classifier & Prompt Sanitizer| C[GHLAgentExecutionEngine]
+    C -->|Dynamic Resilience Check| D[Key Pool Manager & Usage Tracker]
+    
+    C -->|Native Tool Calling| E[Google Gemini 3.6/3.7]
+    C -->|OpenAI Tool Calling| F[Groq Cloud LPU]
+    C -->|OpenAI Tool Calling| G[OpenRouter Hub]
+    
+    E & F & G -->|Function Call Events| C
+    C -->|REST API v2 Bearer Auth| H[GHLSubAccountClient]
+    H -->|Execute Mutation| I[(GoHighLevel Sub-Account)]
+    I -->|JSON Response| H
+    H -->|Execution Result| C
+    C -->|Stream SSE Tokens & Badges| A
 ```
 
 ---
 
 ## 🤖 Supported Models & Providers
 
-| Provider | Category | Featured Models | Capabilities |
+| Provider | Model Identifier | Category | Specialization & Quota |
 | :--- | :--- | :--- | :--- |
-| **Google Gemini** | Google AI Studio | `gemini-3.6-flash`, `gemini-3.7-flash`, `gemini-3.5-flash` | Native Tool Calling, Fast & Smart |
-| **Groq Cloud** | LPU Hardware | `qwen/qwen3.8-27b`, `qwen/qwen3.6-27b`, `openai/gpt-oss-20b` | Ultra Low Latency, Tools Enabled |
-| **OpenRouter** | xAI Grok | `x-ai/grok-4.6`, `x-ai/grok-4.5`, `x-ai/grok-4.3` | Direct Grok Reasoning Engine |
-| **OpenRouter** | DeepSeek AI | `deepseek/deepseek-v4-flash`, `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v3.2` | Advanced Reasoning & Code |
-| **OpenRouter** | Free Tier | `inclusionai/ling-3.0-flash-fin:free`, `dots-studio/dots-3-note-preview:free` | 100% Free Conversational AI |
-| **OpenRouter** | Flagship AI | `anthropic/claude-3.5-sonnet`, `openai/gpt-4o`, `meta-llama/llama-3.3-70b-instruct` | State-of-the-Art Agent Intelligence |
+| **Google Gemini** | `gemini-3.6-flash` | Google AI Studio | **Recommended** • 1M TPM • 15 RPM • Multi-Key Pool |
+| **Google Gemini** | `gemini-3.7-flash` | Google AI Studio | Hybrid Reasoning • High Precision CRM Automations |
+| **Groq Cloud** | `groq/compound-mini` | Groq Ultra-Fast | 70k TPM • 30 RPM • Ultra Low Latency LPU Inference |
+| **Groq Cloud** | `qwen/qwen3.8-27b` | Groq Ultra-Fast | 8k TPM • 30 RPM • Tool Calling Enabled |
+| **Puter.js Free** | `x-ai/grok-4.6` | Puter.js Free AI | State-of-the-Art xAI Grok • 100% Free In-Browser Engine |
+| **OpenRouter** | `meta-llama/llama-3.3-70b-instruct` | OpenRouter Gateway | 60k TPM • Multi-Key Auto-Failover Pool |
 
 ---
 
-## 🛠️ Supported GHL Action Tools
+## 🛠️ Supported GoHighLevel Action Tools
 
-| Tool Name | Description | Key Parameters |
+| Tool Name | GHL REST v2 Endpoint | Description |
 | :--- | :--- | :--- |
-| `create_contact` | Create or update a contact in the sub-account | `first_name`, `last_name`, `email`, `phone`, `tags` |
-| `search_contacts` | Search existing contacts by query string | `query` (name, email, phone) |
-| `create_pipeline` | Build a sales or retention pipeline with stages | `name`, `stages` (e.g. `['Lead', 'Booked', 'Won']`) |
-| `get_pipelines` | Fetch all existing pipelines and stage IDs | _None_ |
-| `create_opportunity` | Place a deal card into a pipeline stage | `pipeline_id`, `stage_id`, `title`, `monetary_value`, `status` |
-| `create_tag` | Add a new tag to the location tag taxonomy | `tag_name` |
-| `create_custom_field` | Create custom fields with types | `name`, `data_type` (`TEXT`, `NUMBER`, `DATE`, `SINGLE_OPTIONS`) |
-| `send_conversation_message` | Send an SMS or Email to a contact | `contact_id`, `message`, `type_` (`SMS`/`Email`) |
-| `create_contact_task` | Assign a task with a due date to a contact | `contact_id`, `title`, `due_date` |
-| `create_contact_note` | Add an internal team note to a contact | `contact_id`, `body` |
+| `create_contact` | `POST /contacts/` | Create or update contact with strict E.164 phone formatting and tags. |
+| `search_contacts` | `GET /contacts/` | Search contacts by name, email, or phone number. |
+| `create_pipeline` | `POST /opportunities/pipelines/` | Build custom opportunity pipelines with ordered stages. |
+| `get_pipelines` | `GET /opportunities/pipelines/` | Retrieve existing pipelines and stage IDs for deal routing. |
+| `create_opportunity` | `POST /opportunities/` | Create a deal card in a specific pipeline stage with monetary value. |
+| `create_tag` | `POST /locations/{id}/tags` | Add a new tag to the location tag taxonomy. |
+| `create_custom_field` | `POST /locations/{id}/customFields`| Create fields (`TEXT`, `NUMBER`, `DATE`, `SINGLE_OPTIONS`). |
+| `send_conversation_message`| `POST /conversations/messages` | Send direct outbound SMS or Email to a contact. |
+| `create_contact_task` | `POST /contacts/{id}/tasks` | Schedule a task with a due date assigned to a contact. |
+| `create_contact_note` | `POST /contacts/{id}/notes` | Log internal team notes on a contact record. |
+| `setup_gym_subaccount`| Batch Provisioning | Deploy complete 14-field, 12-tag Gym & Fitness Center blueprint. |
 
 ---
 
@@ -79,50 +113,54 @@ graph TD
 
 ### 1. Prerequisites
 - **Python 3.10+**
-- **API Keys**:
-  - Google Gemini API Key
-  - Groq Cloud API Key
-  - OpenRouter API Key
-- **GoHighLevel Location ID & Access Token (Bearer Token)**
+- API Keys:
+  - **Google Gemini API Key** (from [Google AI Studio](https://aistudio.google.com/))
+  - **Groq Cloud API Key** (from [Groq Console](https://console.groq.com/))
+  - *(Optional)* **OpenRouter API Key** (from [OpenRouter](https://openrouter.ai/))
+- **GoHighLevel Location ID & Private Integration Bearer Token**
 
-### 2. Clone the Repository
+### 2. Installation
+
 ```bash
+# Clone the repository
 git clone https://github.com/muhammadokashapak/Conversation-AI-Copilot.git
 cd Conversation-AI-Copilot
-```
 
-### 3. Setup Virtual Environment & Dependencies
-```bash
+# Create and activate virtual environment
 python -m venv venv
 
-# Windows:
+# Windows (PowerShell):
 .\venv\Scripts\activate
 # Linux/macOS:
 source venv/bin/activate
 
+# Install required packages
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment Variables
-Copy `.env.example` to `.env` and insert your API keys:
+### 3. Environment Configuration
+Copy the sample environment file and insert your API credentials:
+
 ```bash
 cp .env.example .env
 ```
-Inside `.env`:
+
+Edit `.env`:
 ```env
-GEMINI_API_KEY=your_gemini_api_key
-GROQ_API_KEY=your_groq_api_key
-OPENROUTER_API_KEY=your_openrouter_api_key
+GEMINI_API_KEY=AIzaSy...
+GROQ_API_KEY=gsk_...
+OPENROUTER_API_KEY=sk-or-v1-...
 
 PORT=7861
 HOST=127.0.0.1
 ```
 
-### 5. Run the Application
+### 4. Run the Copilot
 ```bash
 python app.py
 ```
-Open your browser at:
+
+Access the dashboard at:
 👉 **`http://127.0.0.1:7861`**
 
 ---
@@ -131,21 +169,30 @@ Open your browser at:
 
 ```
 Conversation-AI-Copilot/
-├── agent_engine.py         # Multi-provider AI orchestration engine (Gemini, Groq, OpenRouter)
-├── app.py                  # FastAPI server with SSE streaming & model catalog endpoints
-├── ghl_client.py           # GoHighLevel REST API v2 Client SDK
-├── gym_architecture.py     # Production vertical schemas (Gym & Fitness Center CRM setup)
-├── requirements.txt        # Python package dependencies
-├── .env.example            # Sample environment variables template
-├── .gitignore              # Git ignore rules for virtual environments & secrets
-├── static/
-│   ├── index.html          # Modern dark-themed dashboard frontend
-│   ├── style.css           # Glassmorphic CSS design system with model selector styling
-│   └── app.js              # SSE client, dynamic model loader, and tool renderers
-└── README.md               # Project documentation
+├── agent_engine.py             # Multi-provider AI orchestration engine & tool calling
+├── app.py                      # FastAPI server with SSE streaming & REST API endpoints
+├── ghl_client.py               # GoHighLevel REST API v2 SDK (Contacts, Pipelines, Tags)
+├── key_pool_manager.py         # Multi-key rotation, credit polling, and failover engine
+├── usage_tracker.py            # Daily request/token tracking & sliding-window TPM/RPM
+├── portfolio_knowledge_base.py # Document RAG engine (PDF/DOCX semantic retrieval)
+├── gym_architecture.py         # Pre-built Gym & Fitness Center CRM blueprint
+├── model_usage.json            # Persistent model quota & usage tracking state
+├── requirements.txt            # Python dependencies
+├── Procfile                    # Cloud process declaration (Heroku/Render)
+├── railway.json                # Cloud deployment configuration for Railway
+├── docs/                       # Comprehensive technical guides
+│   ├── ARCHITECTURE.md         # System architecture & SSE specifications
+│   ├── API_REFERENCE.md        # Complete REST & SSE API documentation
+│   ├── GHL_INTEGRATION_GUIDE.md# GHL Private Integration & scope setup guide
+│   └── DEPLOYMENT_AND_CONFIG.md# Production deployment, Docker, and Nginx guide
+└── static/
+    ├── index.html              # Glassmorphic single-page web application
+    ├── style.css               # Design system, dark mode, and modal styles
+    └── app.js                  # SSE client, model switcher, and interactive wizard
 ```
 
 ---
 
 ## 📄 License
-This project is licensed under the **MIT License**.
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.

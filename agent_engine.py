@@ -151,6 +151,8 @@ MODEL_OUTPUT_CAPS = {
     'gemini-3.7-flash': 8192,
     'groq/compound-mini': 4096,
     'qwen/qwen3.8-27b': 4096,
+    'x-ai/grok-4.6': 8192,
+    'meta-llama/llama-3.3-70b-instruct': 4096,
 }
 
 def get_token_budget(provider: str, intent: str, model_name: str = '') -> int:
@@ -330,6 +332,28 @@ MODELS_CATALOG = [
         "badge": "⚡ Low Latency LPU",
         "supports_tools": True,
         "description": "Lightning-fast open-weights execution on Groq LPU with full GHL function calling."
+    },
+
+    # Puter.js Free In-Browser AI (xAI Grok)
+    {
+        "id": "x-ai/grok-4.6",
+        "name": "xAI Grok 4.6 (Puter.js Free)",
+        "provider": "puter",
+        "category": "Puter.js Free AI",
+        "badge": "🚀 Free • xAI Grok",
+        "supports_tools": False,
+        "description": "State-of-the-art xAI Grok 4.6 model running client-side via Puter.js. Ultra-fast, zero setup, completely free."
+    },
+
+    # OpenRouter Multi-Key Pool Gateway
+    {
+        "id": "meta-llama/llama-3.3-70b-instruct",
+        "name": "Llama 3.3 70B (OpenRouter Pool)",
+        "provider": "openrouter",
+        "category": "OpenRouter Gateway",
+        "badge": "🌐 6-Key Pool • Tools",
+        "supports_tools": True,
+        "description": "High-capacity Llama 3.3 70B Instruct with auto-failover across 6 OpenRouter pool keys."
     }
 ]
 
@@ -509,6 +533,10 @@ def detect_provider(model_name: str) -> str:
     for item in MODELS_CATALOG:
         if item["id"].lower() == model_name:
             return item["provider"]
+    if "openrouter" in model_name or "llama" in model_name:
+        return "openrouter"
+    if "puter" in model_name or "grok" in model_name:
+        return "puter"
     if "rapidapi" in model_name:
         return "rapidapi"
     if model_name.startswith("gemini-"):
@@ -600,6 +628,37 @@ class GHLAgentExecutionEngine:
                 intent=intent,
                 attachments=attachments
             )
+        elif provider == "puter":
+            yield from self._execute_puter_backend(
+                prompt=prompt,
+                ghl=ghl,
+                is_ghl_connected=is_ghl_connected,
+                system_instruction=system_instruction,
+                model_name=model_name or "x-ai/grok-4.6",
+                location_id=location_id,
+                access_token=access_token,
+                history=history,
+                intent=intent,
+                attachments=attachments
+            )
+        elif provider == "openrouter":
+            from key_pool_manager import openrouter_key_pool
+            active_key = openrouter_key_pool.get_active_key() or self.openrouter_key
+            yield from self._execute_openai_compatible(
+                prompt=prompt,
+                ghl=ghl,
+                is_ghl_connected=is_ghl_connected,
+                system_instruction=system_instruction,
+                model_name=model_name or "meta-llama/llama-3.3-70b-instruct",
+                api_url="https://openrouter.ai/api/v1/chat/completions",
+                api_key=active_key,
+                provider_name="OpenRouter Gateway",
+                location_id=location_id,
+                access_token=access_token,
+                history=history,
+                intent=intent,
+                attachments=attachments
+            )
         elif provider == "rapidapi":
             yield from self._execute_rapidapi(
                 prompt=prompt,
@@ -623,6 +682,59 @@ class GHLAgentExecutionEngine:
                 intent=intent,
                 attachments=attachments
             )
+
+    def _execute_puter_backend(
+        self,
+        prompt: str,
+        ghl: GHLSubAccountClient,
+        is_ghl_connected: bool,
+        system_instruction: str,
+        model_name: str,
+        location_id: str,
+        access_token: str,
+        history: Optional[List[Dict[str, str]]] = None,
+        intent: str = "quick_answer",
+        attachments: Optional[List[Dict[str, Any]]] = None
+    ) -> Generator[Dict[str, Any], None, None]:
+        """
+        Handles backend calls for Puter AI xAI Grok 4.6.
+        When called via backend API, routes to OpenRouter if active, or seamlessly bridges to Gemini 3.6 Flash.
+        (Browser requests execute directly via Puter.js on the client).
+        """
+        if self.openrouter_key:
+            yield from self._execute_openai_compatible(
+                prompt=prompt,
+                ghl=ghl,
+                is_ghl_connected=is_ghl_connected,
+                system_instruction=system_instruction,
+                model_name="x-ai/grok-4.6",
+                api_url="https://openrouter.ai/api/v1/chat/completions",
+                api_key=self.openrouter_key,
+                provider_name="OpenRouter (xAI Grok 4.6)",
+                location_id=location_id,
+                access_token=access_token,
+                history=history,
+                intent=intent,
+                attachments=attachments
+            )
+            return
+
+        yield {
+            "type": "chunk",
+            "text": "> ℹ️ **Notice:** xAI Grok 4.6 runs natively via Puter.js in your browser! Running server-side via **✨ Gemini 3.6 Flash**...\n\n---\n\n"
+        }
+        yield from self._execute_gemini(
+            prompt=prompt,
+            ghl=ghl,
+            is_ghl_connected=is_ghl_connected,
+            system_instruction=system_instruction,
+            model_name="gemini-3.6-flash",
+            location_id=location_id,
+            access_token=access_token,
+            history=history,
+            intent=intent,
+            attachments=attachments
+        )
 
     def _execute_rapidapi(
         self,
@@ -1174,10 +1286,11 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
         target_max_tokens = get_token_budget("groq", intent)
         target_temp = get_temperature(intent, is_tool_mode=is_ghl_connected)
 
-        # Validate Groq model name
-        valid_groq_models = ["groq/compound-mini", "groq/compound", "qwen/qwen3.8-27b", "qwen/qwen3.6-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "allam-2-7b"]
-        if model_name not in valid_groq_models:
-            model_name = "groq/compound-mini"
+        # Validate Groq model name when calling Groq
+        if not is_openrouter:
+            valid_groq_models = ["groq/compound-mini", "groq/compound", "qwen/qwen3.8-27b", "qwen/qwen3.6-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "allam-2-7b"]
+            if model_name not in valid_groq_models:
+                model_name = "groq/compound-mini"
 
         payload: Dict[str, Any] = {
             "model": model_name,

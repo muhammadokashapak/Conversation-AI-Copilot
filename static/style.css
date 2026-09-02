@@ -1622,6 +1622,35 @@ body.dark-theme .agent-markdown-text code:not(pre code) {
     box-shadow: 0 0 10px var(--primary-glow);
 }
 
+/* Live Model Quota Pill in Input Area */
+.input-model-quota-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: #818cf8;
+    border-radius: 14px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.input-model-quota-pill:hover {
+    background: rgba(99, 102, 241, 0.16);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
+    transform: translateY(-1px);
+}
+
+.quota-pill-icon {
+    font-size: 11px;
+}
+
 /* Attachment Previews in Input Island */
 .input-attachments-preview {
     display: flex;

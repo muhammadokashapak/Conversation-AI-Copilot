@@ -34,6 +34,22 @@ MODEL_SPECS: Dict[str, Dict[str, Any]] = {
         "rpm_limit": 30,
         "rpd_limit": 14400,
         "badge_capacity": "8k TPM • 30 RPM"
+    },
+
+    # Puter.js Free AI Models
+    "x-ai/grok-4.6": {
+        "tpm_limit": 100000,
+        "rpm_limit": 60,
+        "rpd_limit": 10000,
+        "badge_capacity": "Free Tier • No Limit"
+    },
+
+    # OpenRouter Gateway Models (Multi-Key Pool)
+    "meta-llama/llama-3.3-70b-instruct": {
+        "tpm_limit": 60000,
+        "rpm_limit": 30,
+        "rpd_limit": 10000,
+        "badge_capacity": "6-Key Pool • Auto-Rotate"
     }
 }
 

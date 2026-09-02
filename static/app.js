@@ -1438,6 +1438,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const iconsMap = {
                 'Google Gemini': '✨',
                 'Groq Ultra-Fast': '⚡',
+                'OpenRouter Gateway': '🌐',
+                'Puter.js Free AI': '🚀',
                 'RapidAPI Free': '🌐',
                 'Other Models': '🔹'
             };
@@ -1449,13 +1451,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const opt = document.createElement('option');
                     opt.value = m.id;
                     const u = m.usage;
-                    let statLabel = m.badge;
-                    if (u && u.current_minute_tokens > 0) {
-                        statLabel = `${u.tpm_usage_pct}% TPM Load`;
-                    } else if (u && u.badge_capacity) {
-                        statLabel = u.badge_capacity;
-                    }
-                    opt.textContent = `${m.name} (${statLabel})`;
+                    const quotaSummary = m.quota_summary || m.quota_limit || (u && u.badge_capacity) || m.badge;
+                    opt.textContent = `${m.name} — Quota: ${quotaSummary}`;
                     if (m.id === savedModel) {
                         opt.selected = true;
                     }
@@ -1478,18 +1475,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateActiveModelUsageDisplay() {
-        if (!modelSelector || !activeModelUsagePill || cachedModelsData.length === 0) return;
+        if (!modelSelector || cachedModelsData.length === 0) return;
         const currentModelId = modelSelector.value;
         const currentModel = cachedModelsData.find(m => m.id === currentModelId);
         if (currentModel && currentModel.usage) {
             const u = currentModel.usage;
             const healthColor = u.health_color || '#10b981';
-            activeModelUsagePill.style.color = healthColor;
-            activeModelUsagePill.style.borderColor = `${healthColor}44`;
-            if (u.current_minute_tokens > 0) {
-                activeModelUsagePill.textContent = `⚡ ${currentModel.name.split(' ')[0]}: ${u.current_minute_tokens.toLocaleString()} / ${u.tpm_limit.toLocaleString()} TPM (${u.tpm_usage_pct}% Load)`;
-            } else {
-                activeModelUsagePill.textContent = `⚡ ${currentModel.name.split(' ')[0]}: 0 TPM Active (${u.badge_capacity || '100% Ready'})`;
+            const quotaText = currentModel.quota_summary || currentModel.quota_limit || u.badge_capacity || 'Standard Quota';
+            
+            // 1. Top Header Active Model Pill
+            if (activeModelUsagePill) {
+                activeModelUsagePill.style.color = healthColor;
+                activeModelUsagePill.style.borderColor = `${healthColor}44`;
+                if (u.current_minute_tokens > 0) {
+                    activeModelUsagePill.textContent = `⚡ ${currentModel.name.split(' ')[0]}: ${u.current_minute_tokens.toLocaleString()} / ${u.tpm_limit.toLocaleString()} TPM (${u.tpm_usage_pct}% Load)`;
+                } else {
+                    activeModelUsagePill.textContent = `⚡ ${currentModel.name.split(' ')[0]}: Quota: ${quotaText}`;
+                }
+            }
+
+            // 2. Chat Input Bar Quota Pill
+            const inputModelQuotaText = document.getElementById('input-model-quota-text');
+            const inputModelQuotaPill = document.getElementById('input-model-quota-pill');
+            if (inputModelQuotaText && inputModelQuotaPill) {
+                inputModelQuotaText.textContent = `Quota: ${quotaText}`;
+                inputModelQuotaPill.style.borderColor = `${healthColor}66`;
+                inputModelQuotaPill.style.color = healthColor;
             }
         }
     }
@@ -1518,6 +1529,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sidebarUsageBtn) sidebarUsageBtn.addEventListener('click', openUsageModal);
     if (closeUsageModalBtn) closeUsageModalBtn.addEventListener('click', closeUsageModal);
     if (doneUsageModalBtn) doneUsageModalBtn.addEventListener('click', closeUsageModal);
+    const inputModelQuotaPill = document.getElementById('input-model-quota-pill');
+    if (inputModelQuotaPill) inputModelQuotaPill.addEventListener('click', openUsageModal);
 
     async function openUsageModal() {
         if (usageModal) usageModal.classList.remove('hidden');
@@ -1537,13 +1550,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const isActive = m.id === currentModelId;
             const usagePct = usage.usage_percentage || 0;
             const barColor = usage.health_color || (usagePct < 60 ? '#10b981' : (usagePct < 85 ? '#f59e0b' : '#ef4444'));
+            const quotaLimit = m.quota_limit || (usage.badge_capacity || m.badge);
+            const poolBadge = m.pool_count > 1 ? `<span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); font-size: 10.5px; padding: 2px 7px; margin-left: 6px;">🔑 ${m.pool_count} Pool Keys</span>` : '';
 
             return `
                 <div class="usage-model-card ${isActive ? 'active-model' : ''}">
                     <div class="usage-card-top">
                         <div class="usage-model-info">
                             <h4>${escapeHtml(m.name)}</h4>
-                            <span class="usage-model-cat">${escapeHtml(m.category)} • <strong>${escapeHtml(usage.badge_capacity || m.badge)}</strong></span>
+                            <span class="usage-model-cat">${escapeHtml(m.category)} • <strong>Quota: ${escapeHtml(quotaLimit)}</strong>${poolBadge}</span>
                         </div>
                         <span class="badge" style="background-color: ${barColor}22; color: ${barColor}; border: 1px solid ${barColor}55;">
                             ${escapeHtml(usage.status || `${usagePct}% Load`)}
@@ -3992,6 +4007,123 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
             if (!isTypewriterRunning) {
                 isTypewriterRunning = true;
                 processTypewriterTick();
+            }
+        }
+
+        const activeModelId = modelSelector ? modelSelector.value : 'gemini-3.6-flash';
+        const activeModelMeta = (cachedModelsData || []).find(m => m.id === activeModelId);
+        const isPuterSelected = activeModelId === 'x-ai/grok-4.6' || (activeModelMeta && activeModelMeta.provider === 'puter');
+
+        // Direct Client-Side Execution via Puter.js for xAI Grok 4.6
+        if (isPuterSelected && typeof puter !== 'undefined' && puter.ai) {
+            try {
+                let puterPrompt = prompt;
+                if (currentAttachments && currentAttachments.length > 0) {
+                    const attachSummary = currentAttachments.map(a => `[Attached ${a.type}: ${a.name}]`).join('\n');
+                    puterPrompt = `${attachSummary}\n\n${prompt}`;
+                }
+
+                // Show Puter provider execution badge
+                const providerBadge = document.createElement('div');
+                providerBadge.className = 'tool-execution-badge';
+                providerBadge.style.background = 'rgba(99, 102, 241, 0.12)';
+                providerBadge.style.borderColor = 'rgba(99, 102, 241, 0.35)';
+                providerBadge.style.color = '#818cf8';
+                providerBadge.innerHTML = `🚀 Puter.js AI: <strong>xAI Grok 4.6</strong> (Free In-Browser Engine)`;
+                botBodyEl.appendChild(providerBadge);
+                recordedBadges.push({ type: 'provider_info', text: providerBadge.innerHTML });
+
+                // Construct conversation messages
+                const messagesPayload = [
+                    {
+                        role: "system",
+                        content: "You are an expert GoHighLevel (GHL) Technical Copilot & Solutions Architect. Provide direct, highly accurate, and practical solutions. Whenever building funnels or code, provide 100% complete production-ready code blocks without cutting off."
+                    }
+                ];
+
+                if (Array.isArray(history) && history.length > 0) {
+                    const recentHist = history.slice(-6);
+                    for (const h of recentHist) {
+                        if (h.content) {
+                            messagesPayload.push({
+                                role: h.role === 'assistant' ? 'assistant' : 'user',
+                                content: h.content
+                            });
+                        }
+                    }
+                }
+                messagesPayload.push({ role: "user", content: puterPrompt });
+
+                let puterSuccess = false;
+
+                // Attempt 1: Streaming mode via puter.ai.chat
+                try {
+                    const stream = await puter.ai.chat(null, {
+                        model: 'x-ai/grok-4.6',
+                        messages: messagesPayload,
+                        stream: true
+                    });
+
+                    if (stream && (typeof stream[Symbol.asyncIterator] === 'function' || stream[Symbol.iterator])) {
+                        for await (const part of stream) {
+                            if (part?.text) {
+                                enqueueIncomingChunk(part.text);
+                                puterSuccess = true;
+                            }
+                        }
+                    } else if (stream?.message?.content) {
+                        enqueueIncomingChunk(stream.message.content);
+                        puterSuccess = true;
+                    }
+                } catch (streamErr) {
+                    console.warn('Puter streaming mode failed, attempting direct chat call:', streamErr);
+                }
+
+                // Attempt 2: Direct call as demonstrated in user snippet
+                if (!puterSuccess) {
+                    const directRes = await puter.ai.chat(puterPrompt, {
+                        model: 'x-ai/grok-4.6'
+                    });
+
+                    const replyContent = directRes?.message?.content || (typeof directRes === 'string' ? directRes : (directRes?.text || ''));
+                    if (replyContent) {
+                        enqueueIncomingChunk(replyContent);
+                        puterSuccess = true;
+                    }
+                }
+
+                if (puterSuccess) {
+                    isStreamDone = true;
+
+                    // Asynchronously report token usage to server to update live statistics
+                    const estPromptTokens = Math.max(20, Math.floor(puterPrompt.length / 4));
+                    const estCompTokens = Math.max(20, Math.floor(displayedText.length / 4));
+                    fetch('/api/record-usage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model_id: 'x-ai/grok-4.6',
+                            prompt_tokens: estPromptTokens,
+                            completion_tokens: estCompTokens
+                        })
+                    }).then(r => r.json()).then(data => {
+                        if (data && data.stats) {
+                            const modelObj = (cachedModelsData || []).find(m => m.id === 'x-ai/grok-4.6');
+                            if (modelObj) {
+                                modelObj.usage = data.stats;
+                                updateActiveModelUsageDisplay();
+                            }
+                        }
+                    }).catch(() => {});
+
+                    if (!isTypewriterRunning) {
+                        removeThinkingState();
+                        onGenerationComplete();
+                    }
+                    return;
+                }
+            } catch (puterErr) {
+                console.warn('Puter client execution error, falling back to server API:', puterErr);
             }
         }
 

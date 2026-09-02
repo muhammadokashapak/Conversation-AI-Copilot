@@ -114,6 +114,11 @@ class VerifyTokenRequest(BaseModel):
     location_id: str
     access_token: str
 
+class RecordUsageRequest(BaseModel):
+    model_id: str
+    prompt_tokens: Optional[int] = 0
+    completion_tokens: Optional[int] = 0
+
 @app.get("/health")
 async def health_check():
     keys = get_server_keys()
@@ -124,20 +129,47 @@ async def health_check():
         "providers": {
             "gemini": bool(keys["gemini"] and keys["gemini"] != "YOUR_GEMINI_API_KEY_HERE"),
             "groq": bool(keys["groq"] and keys["groq"] != "YOUR_GROQ_API_KEY_HERE"),
-            "rapidapi": bool(keys["rapidapi"])
+            "openrouter": bool(keys["openrouter"]),
+            "rapidapi": bool(keys["rapidapi"]),
+            "puter": True
         }
     }
 
 @app.get("/api/models")
 async def get_models_catalog():
-    """Returns the list of all available AI models with live usage statistics."""
+    """Returns the list of all available AI models with live usage statistics and quota information."""
     keys = get_server_keys()
+    gemini_pool_count = len(gemini_key_pool.keys_state) or 1
+    openrouter_pool_count = len(openrouter_key_pool.keys_state) or 1
     enriched_models = []
     
     for m in MODELS_CATALOG:
         m_copy = dict(m)
         stats = usage_tracker.get_model_stats(m["id"])
         m_copy["usage"] = stats
+        
+        # Exact quota summary per model
+        if m.get("provider") == "gemini":
+            m_copy["quota_limit"] = f"1M TPM • 15 RPM ({gemini_pool_count} Active Keys)"
+            m_copy["pool_count"] = gemini_pool_count
+            m_copy["quota_summary"] = f"1M TPM • 15 RPM ({gemini_pool_count} Keys)"
+        elif m.get("provider") == "openrouter":
+            m_copy["quota_limit"] = f"60k TPM • {openrouter_pool_count}-Key Pool"
+            m_copy["pool_count"] = openrouter_pool_count
+            m_copy["quota_summary"] = f"60k TPM ({openrouter_pool_count}-Key Pool)"
+        elif m.get("provider") == "groq":
+            m_copy["quota_limit"] = stats.get("badge_capacity") or "70k TPM • 30 RPM"
+            m_copy["pool_count"] = 1
+            m_copy["quota_summary"] = stats.get("badge_capacity") or "70k TPM • 30 RPM"
+        elif m.get("provider") == "puter":
+            m_copy["quota_limit"] = "Free Tier • No Limit (Puter.js)"
+            m_copy["pool_count"] = 1
+            m_copy["quota_summary"] = "Free In-Browser • Unlimited"
+        else:
+            m_copy["quota_limit"] = stats.get("badge_capacity") or "Standard Quota"
+            m_copy["pool_count"] = 1
+            m_copy["quota_summary"] = stats.get("badge_capacity") or "Standard Quota"
+
         enriched_models.append(m_copy)
 
     return {
@@ -145,10 +177,19 @@ async def get_models_catalog():
         "active_providers": {
             "gemini": bool(keys["gemini"]),
             "groq": bool(keys["groq"]),
-            "rapidapi": bool(keys["rapidapi"])
+            "openrouter": bool(keys["openrouter"]),
+            "rapidapi": bool(keys["rapidapi"]),
+            "puter": True
         },
         "default_model": "gemini-3.6-flash"
     }
+
+@app.post("/api/record-usage")
+async def record_client_usage(req: RecordUsageRequest):
+    """Records client-side model usage (e.g. Puter.js in-browser AI executions)."""
+    usage_tracker.record_usage(req.model_id, prompt_tokens=req.prompt_tokens or 0, completion_tokens=req.completion_tokens or 0)
+    live_stats = usage_tracker.get_model_stats(req.model_id)
+    return {"success": True, "model": req.model_id, "stats": live_stats}
 
 @app.get("/api/usage-stats")
 async def get_all_usage_stats():
