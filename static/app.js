@@ -4058,7 +4058,7 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
 
                 // Attempt 1: Streaming mode via puter.ai.chat
                 try {
-                    const stream = await puter.ai.chat(null, {
+                    const stream = await puter.ai.chat(puterPrompt, {
                         model: 'x-ai/grok-4.6',
                         messages: messagesPayload,
                         stream: true
@@ -4121,9 +4121,17 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                         onGenerationComplete();
                     }
                     return;
+                } else {
+                    // Puter didn't succeed, clean up badge before server fallback
+                    if (providerBadge && providerBadge.parentNode) {
+                        providerBadge.parentNode.removeChild(providerBadge);
+                    }
                 }
             } catch (puterErr) {
                 console.warn('Puter client execution error, falling back to server API:', puterErr);
+                if (providerBadge && providerBadge.parentNode) {
+                    providerBadge.parentNode.removeChild(providerBadge);
+                }
             }
         }
 

@@ -565,9 +565,10 @@ class GHLAgentExecutionEngine:
     High-Performance AI Action Execution Engine for GoHighLevel supporting Google Gemini, Groq Cloud, and RapidAPI.
     """
     def __init__(self, gemini_key: str = "", groq_key: str = "", openrouter_key: str = "", rapidapi_key: str = "", rapidapi_host: str = ""):
-        self.gemini_key = gemini_key.strip()
-        self.groq_key = groq_key.strip()
-        self.openrouter_key = openrouter_key.strip()
+        from key_pool_manager import gemini_key_pool, openrouter_key_pool
+        self.gemini_key = gemini_key.strip() or gemini_key_pool.get_active_key() or os.getenv("GEMINI_API_KEY", "").strip()
+        self.groq_key = groq_key.strip() or os.getenv("GROQ_API_KEY", "").strip()
+        self.openrouter_key = openrouter_key.strip() or openrouter_key_pool.get_active_key() or os.getenv("OPENROUTER_API_KEY", "").strip()
         self.rapidapi_key = rapidapi_key.strip() or os.getenv("RAPIDAPI_KEY", "").strip()
         self.rapidapi_host = rapidapi_host.strip() or os.getenv("RAPIDAPI_HOST", "free-chatgpt-api.p.rapidapi.com").strip()
         self.gemini_client = genai.Client(api_key=self.gemini_key) if self.gemini_key else None
@@ -698,18 +699,22 @@ class GHLAgentExecutionEngine:
     ) -> Generator[Dict[str, Any], None, None]:
         """
         Handles backend calls for Puter AI xAI Grok 4.6.
-        When called via backend API, routes to OpenRouter if active, or seamlessly bridges to Gemini 3.6 Flash.
-        (Browser requests execute directly via Puter.js on the client).
+        When called via backend API, tries OpenRouter with active key pool.
+        If OpenRouter is depleted, rate-limited, or out of credits, seamlessly bridges to Gemini 3.6 Flash.
         """
-        if self.openrouter_key:
-            yield from self._execute_openai_compatible(
+        from key_pool_manager import openrouter_key_pool
+        active_key = openrouter_key_pool.get_active_key() or self.openrouter_key
+        
+        has_generated_real_content = False
+        if active_key:
+            generator = self._execute_openai_compatible(
                 prompt=prompt,
                 ghl=ghl,
                 is_ghl_connected=is_ghl_connected,
                 system_instruction=system_instruction,
                 model_name="x-ai/grok-4.6",
                 api_url="https://openrouter.ai/api/v1/chat/completions",
-                api_key=self.openrouter_key,
+                api_key=active_key,
                 provider_name="OpenRouter (xAI Grok 4.6)",
                 location_id=location_id,
                 access_token=access_token,
@@ -717,24 +722,41 @@ class GHLAgentExecutionEngine:
                 intent=intent,
                 attachments=attachments
             )
-            return
+            try:
+                first_chunk = next(generator, None)
+                if first_chunk:
+                    chunk_text = first_chunk.get("text", "")
+                    if "System Notice: Unable to Generate Response" in chunk_text:
+                        logger.warning("OpenRouter failed with error banner. Falling back immediately to Gemini 3.6 Flash...")
+                        has_generated_real_content = False
+                    else:
+                        has_generated_real_content = True
+                        yield first_chunk
+                        for chunk in generator:
+                            yield chunk
+                        return
+            except Exception as e:
+                logger.warning(f"OpenRouter exception: {e}. Falling back to Gemini...")
+                has_generated_real_content = False
 
-        yield {
-            "type": "chunk",
-            "text": "> ℹ️ **Notice:** xAI Grok 4.6 runs natively via Puter.js in your browser! Running server-side via **✨ Gemini 3.6 Flash**...\n\n---\n\n"
-        }
-        yield from self._execute_gemini(
-            prompt=prompt,
-            ghl=ghl,
-            is_ghl_connected=is_ghl_connected,
-            system_instruction=system_instruction,
-            model_name="gemini-3.6-flash",
-            location_id=location_id,
-            access_token=access_token,
-            history=history,
-            intent=intent,
-            attachments=attachments
-        )
+        if not has_generated_real_content:
+            logger.info("Routing Puter Grok request to Gemini 3.6 Flash fallback...")
+            yield {
+                "type": "chunk",
+                "text": "> ℹ️ *Note: xAI Grok 4.6 upstream capacity is busy. Seamlessly routed via **✨ Gemini 3.6 Flash (5-Key Multi-Key Pool)**:*\n\n---\n\n"
+            }
+            yield from self._execute_gemini(
+                prompt=prompt,
+                ghl=ghl,
+                is_ghl_connected=is_ghl_connected,
+                system_instruction=system_instruction,
+                model_name="gemini-3.6-flash",
+                location_id=location_id,
+                access_token=access_token,
+                history=history,
+                intent=intent,
+                attachments=attachments
+            )
 
     def _execute_rapidapi(
         self,
@@ -1283,7 +1305,9 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
         messages.append({"role": "user", "content": augmented_prompt})
 
         # Adaptive token budget and temperature
-        target_max_tokens = get_token_budget("groq", intent)
+        target_max_tokens = get_token_budget("openrouter" if is_openrouter else "groq", intent)
+        if is_openrouter:
+            target_max_tokens = min(target_max_tokens, 1200)
         target_temp = get_temperature(intent, is_tool_mode=is_ghl_connected)
 
         # Validate Groq model name when calling Groq
@@ -1314,10 +1338,10 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
             
             # If OpenRouter returns credit or quota error (401, 402, 429), retry with lower max_tokens or rotate key
             if is_openrouter and resp.status_code in [401, 402, 429]:
-                # Try with 800 max_tokens if 402 was due to upfront token credit limit
-                if resp.status_code == 402 and payload.get("max_tokens", 1000) > 800:
-                    logger.info("OpenRouter 402 credit cap hit. Retrying with reduced max_tokens=800...")
-                    payload["max_tokens"] = 800
+                # Try with 500 max_tokens if 402 was due to upfront token credit limit
+                if resp.status_code == 402 and payload.get("max_tokens", 1000) > 500:
+                    logger.info("OpenRouter 402 credit cap hit. Retrying with reduced max_tokens=500...")
+                    payload["max_tokens"] = 500
                     resp = requests.post(api_url, headers=headers, json=payload, stream=(not can_call_tools), timeout=45)
 
                 if resp.status_code in [401, 402, 429]:
