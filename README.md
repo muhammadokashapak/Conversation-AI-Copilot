@@ -7,18 +7,52 @@
   <img src="https://img.shields.io/badge/Groq%20Cloud-Ultra--Fast-F55036?style=for-the-badge&logo=groq&logoColor=white" alt="Groq" />
   <img src="https://img.shields.io/badge/OpenRouter-Multi--LLM-6366F1?style=for-the-badge" alt="OpenRouter" />
   <img src="https://img.shields.io/badge/GoHighLevel-REST%20API%20v2-FF7A00?style=for-the-badge" alt="GoHighLevel" />
+  <img src="https://img.shields.io/badge/Auth-Master%20Admin%20%26%20RBAC-10B981?style=for-the-badge" alt="Auth" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
 </p>
 
-> **An enterprise-grade, autonomous multi-model AI Action Execution Agent and conversational Copilot for GoHighLevel Sub-Accounts.** Powered by **Google Gemini**, **Groq Cloud (LPU)**, and **OpenRouter**, the system automates CRM configurations, contact creation, deal pipeline construction, custom fields, automated messaging, and vertical funnel generation directly from natural language prompts.
+> **An enterprise-grade, autonomous multi-model AI Copilot and Action Execution Agent for GoHighLevel (GHL) Sub-Accounts.** Powered by **Google Gemini**, **Groq Cloud (LPU)**, and **OpenRouter**, the system provides conversational CRM mutations, interactive multi-step funnels, intelligent document iteration, role-based access control, and self-healing multi-key resiliency directly from natural language prompts.
 
 ---
 
-## 📚 Complete Documentation Index
+## 🏛️ Engineered by & Organization Credits
 
-For deep-dive technical references, architectural specs, and deployment manuals:
+- **Author & Lead Architect:** **Muhammad Okasha** ([@muhammadokashapak](https://github.com/muhammadokashapak))
+- **Organization / Company:** **XortLogix**
+- **Repository:** [`Conversation-AI-Copilot`](https://github.com/muhammadokashapak/Conversation-AI-Copilot)
+- **Deployment Endpoint:** `http://127.0.0.1:7861`
 
-| Guide | Description |
+---
+
+## 🌟 What's New (Recent Major Updates & Capabilities)
+
+### 1. 🔐 Complete Authentication & Master Admin Suite
+- **Role-Based Access Control (RBAC):** Built-in persistent user authentication via `users.json`.
+- **Master Admin Privilege Mode:** Interactive admin suite allowing live password updates, role assignments, and user management directly from the UI.
+- **Pre-configured Roles:**
+  - **Master Admin:** Full platform control, password reset capabilities, and system oversight.
+  - **Test User:** Sub-account level operator access for sandbox testing.
+
+### 2. 🌪️ 100% Freeform Multi-Step Funnel & Landing Page Builder
+- **Custom Business & Any Industry Support:** Move beyond preset categories—users can specify any niche (e.g., AI Agencies, Solar, Crypto Communities, MedSpas, Martial Arts Dojos).
+- **Custom Pricing & Offers Engine:** Dedicated fields for Core Program Pricing (e.g., $997), VIP Upsells (e.g., $497), and custom payment mechanisms.
+- **Freeform User Specifications:** Multi-line custom requirements textarea allowing users to dictate exact sections (Client Walls, VSL 80% Webhook Triggers, Custom Fields, Testimonial Grids).
+- **Interactive Single-File Architecture:** Generates complete HTML/Tailwind CSS multi-step funnels with working client-side card validation and dynamic step-switching.
+
+### 3. 🎨 Intelligent Document Iteration & Design Customizer
+- **Context-Preserving Code Modification:** When a user uploads or pastes a landing page/funnel and requests design, color palette, or UI changes, the engine preserves 100% of the original business context while applying the new aesthetic.
+- **Large Context Retention (Up to 35,000 Chars):** Eliminates truncation during revision passes, ensuring no steps or forms are lost.
+- **Dedicated "Summary of Changes Made":** Automatically outputs an itemized changelog detailing old vs. new color codes, button states, typography, and layout refinements.
+
+### 4. 🔄 Resilient Model Chaining & Multi-Key Failover
+- **Auto-Handover Cascade:** If Google Gemini hits upstream quota limits mid-generation, generation automatically transfers to Groq Cloud (Qwen 3.8 / Compound Mini) and OpenRouter (Llama 3.3 70B 6-key pool) from the exact cutoff character.
+- **Real-Time Token Budgeting:** Saves 1,600+ tokens per generation turn by dynamically trimming redundant system instructions.
+
+---
+
+## 📚 Complete Technical Documentation
+
+| Document | Description |
 | :--- | :--- |
 | 🏛️ [**System Architecture**](docs/ARCHITECTURE.md) | High-level topology, SSE streaming protocol, failover mechanisms, prompt classification, and token management. |
 | 🔌 [**API Reference Manual**](docs/API_REFERENCE.md) | Full specifications for REST endpoints, SSE stream schemas, request/response models, and cURL examples. |
@@ -27,73 +61,44 @@ For deep-dive technical references, architectural specs, and deployment manuals:
 
 ---
 
-## 🌟 Key Highlights & Capabilities
-
-- **🧠 Multi-Provider AI Engine with Native Tool Calling**:
-  - **Google Gemini**: Gemini 3.6 Flash & Gemini 3.7 Flash with native function calling and multi-million token context.
-  - **Groq Cloud**: Compound Mini & Qwen 3.8 27B running on dedicated LPUs for sub-second responses and automated tool execution.
-  - **OpenRouter Gateway**: Access to xAI Grok, DeepSeek V4, Anthropic Claude 3.5 Sonnet, and free-tier fallback models.
-- **⚡ Full GHL REST API v2 Native SDK**: Direct sub-account operations for Contacts, Pipelines, Deals/Opportunities, Custom Fields, Tags, Tasks, Internal Notes, and Outbound Conversations.
-- **🛡️ Dynamic Key Pool & Self-Healing Resilience**:
-  - Auto-polling of API key health and remaining credits.
-  - Automatic key shifting on `429 (Rate Limit)` or `402 (Payment Required)`.
-  - 65-second automatic cooldown recovery for temporary RPM limit resets.
-- **📡 Server-Sent Events (SSE) Interactive Streaming**:
-  - Step-by-step visual badges (`Invoking Tool` ➡️ `Tool Result`) streamed live to the UI.
-  - Immediate token-by-token rendering with syntax-highlighted code blocks.
-- **📊 Real-Time Token & Quota Tracker**:
-  - Live tracking of daily request limits, daily token counts, and sliding-window TPM/RPM.
-  - Persistent storage in `model_usage.json` with automatic UTC rollover and backup recovery.
-- **📄 Authentic Portfolio RAG System**:
-  - Grounded semantic retrieval engine parsing verified agency case studies from `PDF` and `DOCX` files.
-  - Generates authentic, non-hallucinated case studies, KPI dashboard architectures, and Meta Ads technical proposals.
-- **🎨 Glassmorphic Premium Dark UI**:
-  - Responsive single-page interface with dynamic model selector, quick prompt chips, and sub-account credential manager.
-- **🧙‍♂️ 6-Step Vertical Architecture Wizard**:
-  - Step-by-step guided generator for Niche Selection, Funnel Goals, Landing Page Style, CRM Automations, Brand Customization, and Asset Review.
-- **🏗️ Production-Ready Vertical Blueprints**:
-  - Complete turnkey schema for Gym & Fitness Center CRM taxonomy (14 custom fields, 12 tags, and multi-stage retention pipelines).
-
----
-
-## 🏗️ System Architecture
+## 🏗️ System Topology & Data Flow
 
 ```mermaid
 graph TD
-    A[User / Glassmorphic UI] -->|Natural Language Prompt| B(FastAPI Server :7861)
+    A[User / Glassmorphic UI] -->|Auth Bearer & Natural Language Prompt| B(FastAPI Server :7861)
     B -->|Intent Classifier & Prompt Sanitizer| C[GHLAgentExecutionEngine]
-    C -->|Dynamic Resilience Check| D[Key Pool Manager & Usage Tracker]
+    C -->|Dynamic Resilience & Quota Check| D[Key Pool Manager & Usage Tracker]
     
     C -->|Native Tool Calling| E[Google Gemini 3.6/3.7]
-    C -->|OpenAI Tool Calling| F[Groq Cloud LPU]
-    C -->|OpenAI Tool Calling| G[OpenRouter Hub]
+    C -->|Auto-Failover LPU Inference| F[Groq Cloud]
+    C -->|6-Key Distributed Pool| G[OpenRouter Hub]
     
     E & F & G -->|Function Call Events| C
     C -->|REST API v2 Bearer Auth| H[GHLSubAccountClient]
     H -->|Execute Mutation| I[(GoHighLevel Sub-Account)]
     I -->|JSON Response| H
     H -->|Execution Result| C
-    C -->|Stream SSE Tokens & Badges| A
+    C -->|Stream SSE Tokens & Live Badges| A
 ```
 
 ---
 
-## 🤖 Supported Models & Providers
+## 🤖 Supported Models & Inference Providers
 
 | Provider | Model Identifier | Category | Specialization & Quota |
 | :--- | :--- | :--- | :--- |
 | **Google Gemini** | `gemini-3.6-flash` | Google AI Studio | **Recommended** • 1M TPM • 15 RPM • Multi-Key Pool |
 | **Google Gemini** | `gemini-3.7-flash` | Google AI Studio | Hybrid Reasoning • High Precision CRM Automations |
 | **Groq Cloud** | `groq/compound-mini` | Groq Ultra-Fast | 70k TPM • 30 RPM • Ultra Low Latency LPU Inference |
-| **Groq Cloud** | `qwen/qwen3.8-27b` | Groq Ultra-Fast | 8k TPM • 30 RPM • Tool Calling Enabled |
-| **Puter.js Free** | `x-ai/grok-4.6` | Puter.js Free AI | State-of-the-Art xAI Grok • 100% Free In-Browser Engine |
-| **OpenRouter** | `meta-llama/llama-3.3-70b-instruct` | OpenRouter Gateway | 60k TPM • Multi-Key Auto-Failover Pool |
+| **Groq Cloud** | `qwen/qwen3.8-27b` | Groq Ultra-Fast | 8k TPM • 30 RPM • Fast Code Generation & Handover |
+| **OpenRouter** | `meta-llama/llama-3.3-70b-instruct` | OpenRouter Gateway | 60k TPM • 6-Key Auto-Failover Pool |
+| **Puter.js Free** | `x-ai/grok-4.6` | In-Browser Engine | Free Tier Auxiliary Fallback |
 
 ---
 
 ## 🛠️ Supported GoHighLevel Action Tools
 
-| Tool Name | GHL REST v2 Endpoint | Description |
+| Tool Name | GHL REST v2 Endpoint | Operational Description |
 | :--- | :--- | :--- |
 | `create_contact` | `POST /contacts/` | Create or update contact with strict E.164 phone formatting and tags. |
 | `search_contacts` | `GET /contacts/` | Search contacts by name, email, or phone number. |
@@ -105,21 +110,22 @@ graph TD
 | `send_conversation_message`| `POST /conversations/messages` | Send direct outbound SMS or Email to a contact. |
 | `create_contact_task` | `POST /contacts/{id}/tasks` | Schedule a task with a due date assigned to a contact. |
 | `create_contact_note` | `POST /contacts/{id}/notes` | Log internal team notes on a contact record. |
-| `setup_gym_subaccount`| Batch Provisioning | Deploy complete 14-field, 12-tag Gym & Fitness Center blueprint. |
+| `setup_gym_subaccount`| Batch Provisioning | Deploy turnkey 14-field, 12-tag Gym & Fitness Center blueprint. |
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Quick Start & Installation
 
 ### 1. Prerequisites
 - **Python 3.10+**
+- **Git**
 - API Keys:
   - **Google Gemini API Key** (from [Google AI Studio](https://aistudio.google.com/))
   - **Groq Cloud API Key** (from [Groq Console](https://console.groq.com/))
   - *(Optional)* **OpenRouter API Key** (from [OpenRouter](https://openrouter.ai/))
 - **GoHighLevel Location ID & Private Integration Bearer Token**
 
-### 2. Installation
+### 2. Setup Repository
 
 ```bash
 # Clone the repository
@@ -134,18 +140,18 @@ python -m venv venv
 # Linux/macOS:
 source venv/bin/activate
 
-# Install required packages
+# Install dependencies
 pip install -r requirements.txt
 ```
 
 ### 3. Environment Configuration
-Copy the sample environment file and insert your API credentials:
+Copy the sample environment file and add your credentials:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
+Configure `.env`:
 ```env
 GEMINI_API_KEY=AIzaSy...
 GROQ_API_KEY=gsk_...
@@ -155,12 +161,12 @@ PORT=7861
 HOST=127.0.0.1
 ```
 
-### 4. Run the Copilot
+### 4. Launch Copilot Server
 ```bash
 python app.py
 ```
 
-Access the dashboard at:
+Access the application in your browser:
 👉 **`http://127.0.0.1:7861`**
 
 ---
@@ -169,13 +175,14 @@ Access the dashboard at:
 
 ```
 Conversation-AI-Copilot/
-├── agent_engine.py             # Multi-provider AI orchestration engine & tool calling
-├── app.py                      # FastAPI server with SSE streaming & REST API endpoints
+├── agent_engine.py             # Multi-provider AI orchestration & tool calling engine
+├── app.py                      # FastAPI server, auth endpoints, and SSE stream handlers
+├── users.json                  # Persistent RBAC authentication store
 ├── ghl_client.py               # GoHighLevel REST API v2 SDK (Contacts, Pipelines, Tags)
 ├── key_pool_manager.py         # Multi-key rotation, credit polling, and failover engine
 ├── usage_tracker.py            # Daily request/token tracking & sliding-window TPM/RPM
 ├── portfolio_knowledge_base.py # Document RAG engine (PDF/DOCX semantic retrieval)
-├── gym_architecture.py         # Pre-built Gym & Fitness Center CRM blueprint
+├── gym_architecture.py         # Turnkey Gym & Fitness Center CRM blueprint
 ├── model_usage.json            # Persistent model quota & usage tracking state
 ├── requirements.txt            # Python dependencies
 ├── Procfile                    # Cloud process declaration (Heroku/Render)
@@ -186,13 +193,14 @@ Conversation-AI-Copilot/
 │   ├── GHL_INTEGRATION_GUIDE.md# GHL Private Integration & scope setup guide
 │   └── DEPLOYMENT_AND_CONFIG.md# Production deployment, Docker, and Nginx guide
 └── static/
-    ├── index.html              # Glassmorphic single-page web application
-    ├── style.css               # Design system, dark mode, and modal styles
-    └── app.js                  # SSE client, model switcher, and interactive wizard
+    ├── index.html              # Glassmorphic single-page web app with admin suite
+    ├── style.css               # Design system, dark mode tokens, and wizard styles
+    └── app.js                  # Frontend state controller, SSE client, and wizard engine
 ```
 
 ---
 
-## 📄 License
+## 📄 License & Attribution
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.  
+Built with dedication by **Muhammad Okasha** for **XortLogix**.
