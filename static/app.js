@@ -3480,6 +3480,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     // If user changed Step 1 (Industry), immediately apply the new niche configuration
                     if (grid.getAttribute('data-group') === 'niche') {
                         const val = card.getAttribute('data-value') || '';
+                        const customWrapper = document.getElementById('custom-niche-input-wrapper');
+                        const customInput = document.getElementById('wiz-custom-niche-input');
+                        if (val.includes('Custom')) {
+                            if (customWrapper) customWrapper.style.display = 'block';
+                            if (customInput) customInput.focus();
+                        } else {
+                            if (customWrapper) customWrapper.style.display = 'none';
+                        }
                         const resolvedKey = resolveNicheKey(val);
                         applyNicheConfiguration(resolvedKey);
                     }
@@ -3621,6 +3629,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const brandColor = document.getElementById('wiz-brand-color')?.value || '#10b981';
         const brandLogo = document.getElementById('wiz-brand-logo')?.value.trim() || 'None';
 
+        const corePrice = document.getElementById('wiz-core-price')?.value.trim() || '';
+        const upsellPrice = document.getElementById('wiz-upsell-price')?.value.trim() || '';
+        const customInstructions = document.getElementById('wiz-custom-instructions')?.value.trim() || '';
+        const customNicheInput = document.getElementById('wiz-custom-niche-input')?.value.trim() || '';
+        const displayNiche = (niche.includes('Custom') && customNicheInput) ? customNicheInput : niche;
+
         card.innerHTML = `
             <div class="summary-section">
                 <span class="summary-icon">${isFunnel ? '🌪️' : '📄'}</span>
@@ -3633,7 +3647,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="summary-icon">🏢</span>
                 <div class="summary-content">
                     <div class="summary-label">Industry / Niche</div>
-                    <div class="summary-value">${escapeHtml(niche)}</div>
+                    <div class="summary-value">${escapeHtml(displayNiche)}</div>
                 </div>
             </div>
             <div class="summary-section">
@@ -3660,10 +3674,16 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="summary-section">
                 <span class="summary-icon">✏️</span>
                 <div class="summary-content">
-                    <div class="summary-label">Brand Identity</div>
+                    <div class="summary-label">Brand & Pricing Specifications</div>
                     <div class="summary-value">
                         <strong>${escapeHtml(brandName)}</strong> — "${escapeHtml(brandTagline)}"<br>
-                        <span class="summary-color-swatch" style="background:${brandColor}"></span>${brandColor} &nbsp;|&nbsp; Logo: ${brandLogo === 'None' ? 'AI Generated' : '✓ Custom'}
+                        ${corePrice ? `<span class="summary-tag" style="background:rgba(16,185,129,0.15); color:#10b981;">Core: ${escapeHtml(corePrice)}</span> ` : ''}
+                        ${upsellPrice ? `<span class="summary-tag" style="background:rgba(99,102,241,0.15); color:#818cf8;">VIP: ${escapeHtml(upsellPrice)}</span> ` : ''}
+                        <span style="display:inline-flex; align-items:center; gap:5px; margin-top:4px;">
+                            <span style="width:12px; height:12px; border-radius:50%; background:${brandColor}; display:inline-block; border:1px solid rgba(255,255,255,0.2);"></span>
+                            <code>${brandColor}</code>
+                        </span>
+                        ${customInstructions ? `<div style="margin-top:6px; font-size:12px; color:#cbd5e1; font-style:italic;">"${escapeHtml(customInstructions)}"</div>` : ''}
                     </div>
                 </div>
             </div>
@@ -3701,6 +3721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 node.classList.add('active');
                 if (numSpan) numSpan.textContent = String(nodeStep);
             } else {
+                node.classList.add('active');
                 if (numSpan) numSpan.textContent = String(nodeStep);
             }
         });
@@ -3805,7 +3826,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const rawObjective = step2Selected ? (step2Selected.querySelector('h5')?.textContent || step2Selected.getAttribute('data-value')) : (isFunnel ? 'VSL & 1-on-1 Assessment Funnel' : '7-Day Free VIP Pass');
         const rawStyle = step3Selected ? (step3Selected.querySelector('h5')?.textContent || step3Selected.getAttribute('data-value')) : 'Modern Dark Glassmorphism';
 
-        const cleanNiche = rawNiche.split('(')[0].trim();
+        const customNicheInput = document.getElementById('wiz-custom-niche-input')?.value.trim() || '';
+        const cleanNiche = (rawNiche.includes('Custom') && customNicheInput) ? customNicheInput : rawNiche.split('(')[0].trim();
         const cleanObjective = rawObjective.split('(')[0].trim();
         const cleanStyle = rawStyle.split('(')[0].trim();
 
@@ -3815,23 +3837,30 @@ document.addEventListener('DOMContentLoaded', () => {
             if (title) automations.push(title);
         });
 
-        // Brand customization fields
+        // Brand customization & custom user properties
         const config = NICHE_CONFIGURATIONS[currentNicheKey] || NICHE_CONFIGURATIONS['fitness'];
-        const brandName = document.getElementById('wiz-brand-name')?.value.trim() || config.step5.defaultBrandName;
+        const brandName = document.getElementById('wiz-brand-name')?.value.trim() || (cleanNiche + ' Official');
         const brandTagline = document.getElementById('wiz-brand-tagline')?.value.trim() || config.step5.defaultTagline;
         const brandColor = document.getElementById('wiz-brand-color')?.value || config.step5.defaultColor;
         const brandLogo = document.getElementById('wiz-brand-logo')?.value.trim() || '';
 
+        const corePrice = document.getElementById('wiz-core-price')?.value.trim() || '';
+        const upsellPrice = document.getElementById('wiz-upsell-price')?.value.trim() || '';
+        const customInstructions = document.getElementById('wiz-custom-instructions')?.value.trim() || '';
+
         closeWizardModal();
 
-        let brandSection = `\n\nBrand Customization:`;
+        let brandSection = `\n\nBrand & Custom Specifications:`;
         brandSection += `\n- Business Name: ${brandName}`;
         brandSection += `\n- Hero Tagline: ${brandTagline}`;
         brandSection += `\n- Primary Brand Color: ${brandColor}`;
+        if (corePrice) brandSection += `\n- Core Program / Product Price: ${corePrice}`;
+        if (upsellPrice) brandSection += `\n- VIP Upgrade / Upsell Price: ${upsellPrice}`;
         if (brandLogo) brandSection += `\n- Logo URL: ${brandLogo}`;
+        if (customInstructions) brandSection += `\n\nSpecial User Requirements & Custom Properties:\n${customInstructions}`;
 
         const compiledPrompt = isFunnel ?
-            `Build a complete GoHighLevel Multi-Step High-Converting Funnel and CRM Architecture for a ${cleanNiche} business.
+            `Build a complete GoHighLevel Multi-Step High-Converting Funnel and CRM Architecture for a ${cleanNiche} business based strictly on the user's custom specifications.
 
 Configuration:
 - Asset Type: Multi-Step Conversion Funnel (Opt-in ➔ VSL ➔ Booking/Checkout ➔ Upsell ➔ Thank You)

@@ -583,6 +583,18 @@
                                 </div>
                                 <span class="card-check">✓</span>
                             </div>
+                            <div class="wizard-option-card" data-value="Custom / Any Other Business (Build Anything You Want)" id="wizard-custom-niche-card">
+                                <div class="card-icon">✨</div>
+                                <div class="card-content">
+                                    <h5>Custom / Any Industry</h5>
+                                    <p>Tailor-make any unique niche, custom offer, or specialized business</p>
+                                </div>
+                                <span class="card-check">✓</span>
+                            </div>
+                        </div>
+                        <div id="custom-niche-input-wrapper" style="display:none; margin-top:14px; padding:12px 14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px;">
+                            <label style="display:block; font-size:12px; font-weight:600; color:#cbd5e1; margin-bottom:6px; text-transform:uppercase;">Describe Your Specific Business / Niche</label>
+                            <input type="text" id="wiz-custom-niche-input" placeholder="e.g. AI Automation Agency, Roofer, Crypto Community, Martial Arts Dojo" style="width:100%; padding:10px 14px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:#ffffff; font-size:13.5px; outline:none;">
                         </div>
                     </div>
 
@@ -651,6 +663,24 @@
                                     <label for="wiz-brand-logo">Logo Image URL <span class="optional-tag">(optional)</span></label>
                                     <input type="url" id="wiz-brand-logo" placeholder="https://yourdomain.com/logo.png" autocomplete="off">
                                 </div>
+                            </div>
+
+                            <!-- User's Custom Offers & Pricing Properties -->
+                            <div class="brand-form-row" style="margin-top:10px;">
+                                <div class="brand-form-group">
+                                    <label for="wiz-core-price">Core Offer & Price</label>
+                                    <input type="text" id="wiz-core-price" placeholder="e.g. $997 Core Program, or Free Assessment" autocomplete="off">
+                                </div>
+                                <div class="brand-form-group">
+                                    <label for="wiz-upsell-price">VIP Upgrade / Upsell Price <span class="optional-tag">(optional)</span></label>
+                                    <input type="text" id="wiz-upsell-price" placeholder="e.g. $497 VIP Mastermind Upgrade" autocomplete="off">
+                                </div>
+                            </div>
+
+                            <!-- Custom Features, Steps & User Instructions -->
+                            <div class="brand-form-group" style="margin-top:10px;">
+                                <label for="wiz-custom-instructions">Custom Properties, Specific Funnel Steps & Special Instructions</label>
+                                <textarea id="wiz-custom-instructions" rows="3" placeholder="Describe any specific requirements you want (e.g. 2-step checkout with $47 bump offer, 80% VSL video watch webhook, 3 custom fields: experience_level, goal, phone, dark neon theme, or specific sections like FAQ and testimonial wall)..." style="width:100%; padding:10px 14px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:#ffffff; font-size:13px; resize:vertical; font-family:inherit;"></textarea>
                             </div>
                         </div>
                     </div>
