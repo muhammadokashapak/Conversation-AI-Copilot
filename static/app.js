@@ -12,22 +12,138 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarLocationId = document.getElementById('sidebar-location-id');
     const sidebarConnectGhlBtn = document.getElementById('sidebar-connect-ghl');
 
-    // Theme Toggle
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    const savedTheme = localStorage.getItem('theme_preference') || 'dark';
-    if (savedTheme === 'light') {
-        document.body.classList.remove('dark-theme');
-    } else {
-        document.body.classList.add('dark-theme');
+    // ==================== AUTHENTICATION & LOGIN SYSTEM ====================
+    const loginOverlay = document.getElementById('login-modal-overlay');
+    const loginForm = document.getElementById('login-form');
+    const loginEmailInput = document.getElementById('login-email');
+    const loginPasswordInput = document.getElementById('login-password');
+    const loginSubmitBtn = document.getElementById('login-submit-btn');
+    const loginErrorBanner = document.getElementById('login-error-banner');
+    const loginErrorText = document.getElementById('login-error-text');
+    const togglePwdBtn = document.getElementById('toggle-pwd-btn');
+    const userDisplayName = document.getElementById('user-display-name');
+    const userDisplayRole = document.getElementById('user-display-role');
+    const userAvatarBadge = document.getElementById('user-avatar-badge');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    function checkAuthSession() {
+        const savedUserStr = localStorage.getItem('copilot_auth_user');
+        const savedToken = localStorage.getItem('copilot_auth_token');
+
+        if (!savedUserStr || !savedToken) {
+            showLoginModal();
+            return false;
+        }
+
+        try {
+            const user = JSON.parse(savedUserStr);
+            renderLoggedInUser(user);
+            hideLoginModal();
+            return true;
+        } catch (e) {
+            showLoginModal();
+            return false;
+        }
     }
 
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', () => {
-            document.body.classList.toggle('dark-theme');
-            const isDark = document.body.classList.contains('dark-theme');
-            localStorage.setItem('theme_preference', isDark ? 'dark' : 'light');
+    function showLoginModal() {
+        if (loginOverlay) {
+            loginOverlay.style.display = 'flex';
+            if (loginEmailInput) loginEmailInput.focus();
+        }
+    }
+
+    function hideLoginModal() {
+        if (loginOverlay) {
+            loginOverlay.style.display = 'none';
+        }
+        if (loginErrorBanner) {
+            loginErrorBanner.style.display = 'none';
+        }
+    }
+
+    function renderLoggedInUser(user) {
+        if (userDisplayName) userDisplayName.textContent = user.name || user.email;
+        if (userDisplayRole) userDisplayRole.textContent = user.role || 'Member';
+        if (userAvatarBadge) userAvatarBadge.textContent = user.avatar || '👤';
+    }
+
+    if (togglePwdBtn && loginPasswordInput) {
+        togglePwdBtn.addEventListener('click', () => {
+            const isPwd = loginPasswordInput.getAttribute('type') === 'password';
+            loginPasswordInput.setAttribute('type', isPwd ? 'text' : 'password');
         });
     }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = (loginEmailInput.value || '').trim();
+            const password = (loginPasswordInput.value || '').trim();
+
+            if (!email || !password) {
+                if (loginErrorText) loginErrorText.textContent = 'Please enter both email and password.';
+                if (loginErrorBanner) loginErrorBanner.style.display = 'flex';
+                return;
+            }
+
+            if (loginSubmitBtn) {
+                loginSubmitBtn.disabled = true;
+                loginSubmitBtn.innerHTML = '<span>Verifying...</span>';
+            }
+            if (loginErrorBanner) loginErrorBanner.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    localStorage.setItem('copilot_auth_token', data.token);
+                    localStorage.setItem('copilot_auth_user', JSON.stringify(data.user));
+                    renderLoggedInUser(data.user);
+                    hideLoginModal();
+                } else {
+                    const msg = data.detail || data.message || 'Invalid email or password.';
+                    if (loginErrorText) loginErrorText.textContent = msg;
+                    if (loginErrorBanner) loginErrorBanner.style.display = 'flex';
+                }
+            } catch (err) {
+                if (loginErrorText) loginErrorText.textContent = 'Network error. Could not connect to server.';
+                if (loginErrorBanner) loginErrorBanner.style.display = 'flex';
+            } finally {
+                if (loginSubmitBtn) {
+                    loginSubmitBtn.disabled = false;
+                    loginSubmitBtn.innerHTML = '<span>Sign In to Copilot</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
+                }
+            }
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to log out of Conversation AI Copilot?')) {
+                const token = localStorage.getItem('copilot_auth_token');
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                } catch (e) {}
+                localStorage.removeItem('copilot_auth_token');
+                localStorage.removeItem('copilot_auth_user');
+                showLoginModal();
+            }
+        });
+    }
+
+    // Check login state immediately on boot
+    checkAuthSession();
 
     // Sidebar Toggle & Overlay Logic
     function toggleSidebar() {

@@ -119,6 +119,80 @@ class RecordUsageRequest(BaseModel):
     prompt_tokens: Optional[int] = 0
     completion_tokens: Optional[int] = 0
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+# In-memory authentication database & session store
+USERS_DB = {
+    "muhammad.okasha2146@gmail.com": {
+        "email": "muhammad.okasha2146@gmail.com",
+        "password": "okashaadmin",
+        "name": "Muhammad Okasha",
+        "role": "Master Admin",
+        "avatar": "👑"
+    },
+    "test@gmail.com": {
+        "email": "test@gmail.com",
+        "password": "tum12345678",
+        "name": "Test User",
+        "role": "Member",
+        "avatar": "👤"
+    }
+}
+
+ACTIVE_SESSIONS: Dict[str, Dict[str, Any]] = {}
+import secrets as _secrets
+
+@app.post("/api/auth/login")
+async def auth_login(req: LoginRequest):
+    email = req.email.strip().lower()
+    password = req.password.strip()
+
+    user = USERS_DB.get(email)
+    if not user or user["password"] != password:
+        raise HTTPException(status_code=401, detail="Invalid email or password. Please check your credentials.")
+
+    token = _secrets.token_hex(24)
+    session_data = {
+        "email": user["email"],
+        "name": user["name"],
+        "role": user["role"],
+        "avatar": user["avatar"],
+        "token": token
+    }
+    ACTIVE_SESSIONS[token] = session_data
+
+    return {
+        "success": True,
+        "token": token,
+        "user": session_data
+    }
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    token = ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+    
+    if not token or token not in ACTIVE_SESSIONS:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    return {
+        "success": True,
+        "user": ACTIVE_SESSIONS[token]
+    }
+
+@app.post("/api/auth/logout")
+async def auth_logout(request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        if token in ACTIVE_SESSIONS:
+            del ACTIVE_SESSIONS[token]
+    return {"success": True, "message": "Logged out successfully"}
+
 @app.get("/health")
 async def health_check():
     keys = get_server_keys()
