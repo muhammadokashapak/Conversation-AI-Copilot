@@ -1117,19 +1117,77 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
                                     gemini_key_pool.mark_key_depleted(active_gemini_key, 429, str(e_cont))
                                 break
 
+                        # Check if still truncated after Gemini loop exhausted
+                        if stream_started and detect_truncation(accumulated_text) and not is_fallback and self.groq_key:
+                            recent_tail = accumulated_text[-2000:]
+                            last_cutoff = accumulated_text[-80:].replace('\n', ' ')
+                            logger.info(f"Gemini capacity reached mid-generation. Handing off to Groq Cloud...")
+                            yield {
+                                "type": "chunk",
+                                "text": f"\n\n> 🔄 **Model Handover:** Google Gemini generated the initial architecture ({len(accumulated_text):,} chars). Reaching quota limit — **Groq Cloud (Qwen 3.8)** is now seamlessly continuing generation from this exact point...\n\n---\n\n"
+                            }
+                            yield from self._execute_openai_compatible(
+                                prompt=prompt,
+                                ghl=ghl,
+                                is_ghl_connected=is_ghl_connected,
+                                system_instruction=system_instruction,
+                                model_name="qwen/qwen3.8-27b",
+                                api_url="https://api.groq.com/openai/v1/chat/completions",
+                                api_key=self.groq_key,
+                                provider_name="Groq Cloud",
+                                location_id=location_id,
+                                access_token=access_token,
+                                history=history,
+                                intent=intent,
+                                is_fallback=True,
+                                attachments=attachments,
+                                continuation_tail=recent_tail,
+                                continuation_cutoff=last_cutoff
+                            )
+                            return
+
                         if accumulated_text.count('```') % 2 != 0:
                             yield {"type": "chunk", "text": "\n```\n"}
 
                         gemini_key_pool.record_success(active_gemini_key)
                         return
                     except Exception as e_mod:
-                        if stream_started:
-                            return
                         last_err_text = str(e_mod)
                         logger.warning(f"Gemini streaming with {mod} on key {active_gemini_key[:8]} failed: {e_mod}")
                         if "429" in last_err_text or "RESOURCE_EXHAUSTED" in last_err_text or "quota" in last_err_text.lower():
                             gemini_key_pool.mark_key_depleted(active_gemini_key, 429, last_err_text)
-                            break  # Shift to next key in outer loop
+
+                        # If text was already started and errored out, seamlessly hand over to Groq
+                        if stream_started and not is_fallback and self.groq_key:
+                            recent_tail = accumulated_text[-2000:]
+                            last_cutoff = accumulated_text[-80:].replace('\n', ' ')
+                            yield {
+                                "type": "chunk",
+                                "text": f"\n\n> 🔄 **Model Handover:** Google Gemini limit reached ({len(accumulated_text):,} chars generated). Seamlessly continuing with **Groq Cloud (Qwen 3.8)**...\n\n---\n\n"
+                            }
+                            yield from self._execute_openai_compatible(
+                                prompt=prompt,
+                                ghl=ghl,
+                                is_ghl_connected=is_ghl_connected,
+                                system_instruction=system_instruction,
+                                model_name="qwen/qwen3.8-27b",
+                                api_url="https://api.groq.com/openai/v1/chat/completions",
+                                api_key=self.groq_key,
+                                provider_name="Groq Cloud",
+                                location_id=location_id,
+                                access_token=access_token,
+                                history=history,
+                                intent=intent,
+                                is_fallback=True,
+                                attachments=attachments,
+                                continuation_tail=recent_tail,
+                                continuation_cutoff=last_cutoff
+                            )
+                            return
+
+                        if stream_started:
+                            return
+
                         if "pro" in mod.lower() or "3.7" in mod.lower():
                             continue
 
@@ -1137,10 +1195,10 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
             if not is_fallback:
                 if self.groq_key:
                     groq_target = "qwen/qwen3.8-27b"
-                    logger.info("Falling back from Gemini to Groq Cloud...")
+                    logger.info("Falling back from Gemini to Groq Cloud before start...")
                     yield {
                         "type": "chunk",
-                        "text": "> ℹ️ **Notice:** Google Gemini daily free quota reached on active pool. Seamlessly switching to high-capacity **Groq Cloud (Qwen 3.8)** to complete your request...\n\n---\n\n"
+                        "text": "> 🔄 **Model Handover:** Google Gemini active keys busy or at quota. Routing query to **Groq Cloud (Qwen 3.8)** for instant generation...\n\n---\n\n"
                     }
                     yield from self._execute_openai_compatible(
                         prompt=prompt,
@@ -1292,7 +1350,9 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
         intent: str = "quick_answer",
         is_fallback: bool = False,
         extra_headers: Optional[Dict[str, str]] = None,
-        attachments: Optional[List[Dict[str, Any]]] = None
+        attachments: Optional[List[Dict[str, Any]]] = None,
+        continuation_tail: str = "",
+        continuation_cutoff: str = ""
     ) -> Generator[Dict[str, Any], None, None]:
         is_openrouter = ("openrouter" in provider_name.lower())
         active_key = api_key
@@ -1333,16 +1393,25 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
                 "Guarantee the code completes 100% from <!DOCTYPE html> down to </html>."
             )
 
-        # Compress conversation history intelligently
-        provider_slug = "groq" if "groq" in provider_name.lower() else "openrouter"
-        compressed_history = compress_history(history or [], provider_slug, max_messages=4, intent=intent)
-        for msg in compressed_history:
-            role = "user" if msg.get("role") == "user" else "assistant"
-            content = msg.get("content", "").strip()
-            if content:
-                messages.append({"role": role, "content": content})
-        
-        messages.append({"role": "user", "content": augmented_prompt})
+        # If continuing from a previous model's cutoff, prime messages to resume cleanly
+        if continuation_tail and continuation_cutoff:
+            messages.append({"role": "user", "content": augmented_prompt})
+            messages.append({"role": "assistant", "content": f"...{continuation_tail}"})
+            messages.append({
+                "role": "user",
+                "content": f"The response was interrupted at: '{continuation_cutoff}'. Continue generating EXACTLY from that point onward without repeating any previously outputted text. Finish all remaining HTML tags, tables, and workflows completely."
+            })
+        else:
+            # Compress conversation history intelligently
+            provider_slug = "groq" if "groq" in provider_name.lower() else "openrouter"
+            compressed_history = compress_history(history or [], provider_slug, max_messages=4, intent=intent)
+            for msg in compressed_history:
+                role = "user" if msg.get("role") == "user" else "assistant"
+                content = msg.get("content", "").strip()
+                if content:
+                    messages.append({"role": role, "content": content})
+            
+            messages.append({"role": "user", "content": augmented_prompt})
 
         # Adaptive token budget and temperature
         target_max_tokens = get_token_budget("openrouter" if is_openrouter else "groq", intent)
@@ -1503,6 +1572,38 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
                     except Exception as e_cont:
                         logger.warning(f"Continuation request failed: {e_cont}")
                         break
+
+                # If Groq was generating and stopped prematurely, hand off to OpenRouter Multi-Key Pool
+                if not is_openrouter and detect_truncation(accumulated_text):
+                    from key_pool_manager import openrouter_key_pool
+                    openrouter_key = openrouter_key_pool.get_active_key() or self.openrouter_key
+                    if openrouter_key:
+                        recent_tail = accumulated_text[-2000:]
+                        last_cutoff = accumulated_text[-80:].replace('\n', ' ')
+                        logger.info("Groq capacity exhausted mid-generation. Handing off to OpenRouter Llama 3.3 70B pool...")
+                        yield {
+                            "type": "chunk",
+                            "text": f"\n\n> 🔄 **Model Handover:** Groq Cloud limit reached ({len(accumulated_text):,} chars generated). Seamlessly continuing with **Llama 3.3 70B (OpenRouter 6-Key Pool)** from this exact point...\n\n---\n\n"
+                        }
+                        yield from self._execute_openai_compatible(
+                            prompt=prompt,
+                            ghl=ghl,
+                            is_ghl_connected=is_ghl_connected,
+                            system_instruction=system_instruction,
+                            model_name="meta-llama/llama-3.3-70b-instruct",
+                            api_url="https://openrouter.ai/api/v1/chat/completions",
+                            api_key=openrouter_key,
+                            provider_name="OpenRouter",
+                            location_id=location_id,
+                            access_token=access_token,
+                            history=history,
+                            intent=intent,
+                            is_fallback=True,
+                            attachments=attachments,
+                            continuation_tail=recent_tail,
+                            continuation_cutoff=last_cutoff
+                        )
+                        return
 
                 if accumulated_text.count('```') % 2 != 0:
                     yield {"type": "chunk", "text": "\n```\n"}
