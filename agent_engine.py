@@ -334,16 +334,16 @@ MODELS_CATALOG = [
         "description": "Lightning-fast open-weights execution on Groq LPU with full GHL function calling."
     },
 
-    # Puter.js Free In-Browser AI (xAI Grok — Fast Variant)
-    {
-        "id": "x-ai/grok-4.6",
-        "name": "xAI Grok 3 Mini (Puter.js Free)",
-        "provider": "puter",
-        "category": "Puter.js Free AI",
-        "badge": "⚡ Free • Fast xAI",
-        "supports_tools": False,
-        "description": "Fast xAI Grok 3 Mini via Puter.js — instant responses, no thinking delay. Runs client-side, zero API key, completely free."
-    },
+    # Puter.js Free In-Browser AI (Commented out to prioritize direct ultra-fast API speeds)
+    # {
+    #     "id": "x-ai/grok-4.6",
+    #     "name": "xAI Grok 3 Mini (Puter.js Free)",
+    #     "provider": "puter",
+    #     "category": "Puter.js Free AI",
+    #     "badge": "⚡ Free • Fast xAI",
+    #     "supports_tools": False,
+    #     "description": "Fast xAI Grok 3 Mini via Puter.js — instant responses, no thinking delay. Runs client-side, zero API key, completely free."
+    # },
 
     # OpenRouter Multi-Key Pool Gateway
     {

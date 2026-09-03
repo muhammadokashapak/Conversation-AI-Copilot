@@ -4010,156 +4010,16 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
             }
         }
 
+        /*
+        // --- Puter.js Client-Side Execution (Commented out to prioritize ultra-fast backend API speeds) ---
         const activeModelId = modelSelector ? modelSelector.value : 'gemini-3.6-flash';
         const activeModelMeta = (cachedModelsData || []).find(m => m.id === activeModelId);
         const isPuterSelected = activeModelId === 'x-ai/grok-4.6' || (activeModelMeta && activeModelMeta.provider === 'puter');
 
-        // Direct Client-Side Execution via Puter.js for xAI Grok 4.6
         if (isPuterSelected && typeof puter !== 'undefined' && puter.ai) {
-            try {
-                let puterPrompt = prompt;
-                if (currentAttachments && currentAttachments.length > 0) {
-                    const attachSummary = currentAttachments.map(a => `[Attached ${a.type}: ${a.name}]`).join('\n');
-                    puterPrompt = `${attachSummary}\n\n${prompt}`;
-                }
-
-                // Show Puter provider execution badge
-                const providerBadge = document.createElement('div');
-                providerBadge.className = 'tool-execution-badge';
-                providerBadge.style.background = 'rgba(99, 102, 241, 0.12)';
-                providerBadge.style.borderColor = 'rgba(99, 102, 241, 0.35)';
-                providerBadge.style.color = '#818cf8';
-                providerBadge.innerHTML = `🚀 Puter.js AI: <strong>xAI Grok 3 Mini</strong> (Free • Fast In-Browser)`;
-                botBodyEl.appendChild(providerBadge);
-                recordedBadges.push({ type: 'provider_info', text: providerBadge.innerHTML });
-
-                // Construct conversation messages
-                const messagesPayload = [
-                    {
-                        role: "system",
-                        content: "You are an expert GoHighLevel (GHL) Technical Copilot. Be direct, concise, and skip unnecessary deliberation. Provide practical solutions immediately. For code requests, provide complete production-ready code."
-                    }
-                ];
-
-                if (Array.isArray(history) && history.length > 0) {
-                    const recentHist = history.slice(-4);
-                    for (const h of recentHist) {
-                        if (h.content) {
-                            messagesPayload.push({
-                                role: h.role === 'assistant' ? 'assistant' : 'user',
-                                content: h.content.substring(0, 2000)
-                            });
-                        }
-                    }
-                }
-                messagesPayload.push({ role: "user", content: puterPrompt });
-
-                let puterSuccess = false;
-
-                // Attempt 1: Streaming mode via puter.ai.chat (fast model variant)
-                try {
-                    const stream = await puter.ai.chat(messagesPayload, {
-                        model: 'grok-3-mini',
-                        stream: true,
-                        temperature: 0.3,
-                        max_tokens: 4096
-                    });
-
-                    if (stream && (typeof stream[Symbol.asyncIterator] === 'function' || stream[Symbol.iterator])) {
-                        for await (const part of stream) {
-                            if (part?.text) {
-                                enqueueIncomingChunk(part.text);
-                                puterSuccess = true;
-                            }
-                        }
-                    } else if (stream?.message?.content) {
-                        enqueueIncomingChunk(stream.message.content);
-                        puterSuccess = true;
-                    }
-                } catch (streamErr) {
-                    console.warn('Puter streaming (grok-3-mini) failed, trying grok-3-fast:', streamErr);
-                    
-                    // Attempt 1b: Try grok-3-fast as fallback
-                    try {
-                        const stream2 = await puter.ai.chat(messagesPayload, {
-                            model: 'grok-3-fast',
-                            stream: true,
-                            temperature: 0.3,
-                            max_tokens: 4096
-                        });
-                        if (stream2 && (typeof stream2[Symbol.asyncIterator] === 'function' || stream2[Symbol.iterator])) {
-                            for await (const part of stream2) {
-                                if (part?.text) {
-                                    enqueueIncomingChunk(part.text);
-                                    puterSuccess = true;
-                                }
-                            }
-                        } else if (stream2?.message?.content) {
-                            enqueueIncomingChunk(stream2.message.content);
-                            puterSuccess = true;
-                        }
-                    } catch (err2) {
-                        console.warn('grok-3-fast also failed, trying original grok-4.6:', err2);
-                    }
-                }
-
-                // Attempt 2: Direct call with original grok-4.6 as last resort
-                if (!puterSuccess) {
-                    const directRes = await puter.ai.chat(puterPrompt, {
-                        model: 'x-ai/grok-4.6',
-                        temperature: 0.3,
-                        max_tokens: 4096
-                    });
-
-                    const replyContent = directRes?.message?.content || (typeof directRes === 'string' ? directRes : (directRes?.text || ''));
-                    if (replyContent) {
-                        enqueueIncomingChunk(replyContent);
-                        puterSuccess = true;
-                    }
-                }
-
-                if (puterSuccess) {
-                    isStreamDone = true;
-
-                    // Asynchronously report token usage to server to update live statistics
-                    const estPromptTokens = Math.max(20, Math.floor(puterPrompt.length / 4));
-                    const estCompTokens = Math.max(20, Math.floor(displayedText.length / 4));
-                    fetch('/api/record-usage', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model_id: 'x-ai/grok-4.6',
-                            prompt_tokens: estPromptTokens,
-                            completion_tokens: estCompTokens
-                        })
-                    }).then(r => r.json()).then(data => {
-                        if (data && data.stats) {
-                            const modelObj = (cachedModelsData || []).find(m => m.id === 'x-ai/grok-4.6');
-                            if (modelObj) {
-                                modelObj.usage = data.stats;
-                                updateActiveModelUsageDisplay();
-                            }
-                        }
-                    }).catch(() => {});
-
-                    if (!isTypewriterRunning) {
-                        removeThinkingState();
-                        onGenerationComplete();
-                    }
-                    return;
-                } else {
-                    // Puter didn't succeed, clean up badge before server fallback
-                    if (providerBadge && providerBadge.parentNode) {
-                        providerBadge.parentNode.removeChild(providerBadge);
-                    }
-                }
-            } catch (puterErr) {
-                console.warn('Puter client execution error, falling back to server API:', puterErr);
-                if (providerBadge && providerBadge.parentNode) {
-                    providerBadge.parentNode.removeChild(providerBadge);
-                }
-            }
+            // Puter in-browser execution logic preserved for future reference
         }
+        */
 
         try {
             const response = await fetch('/api/chat-agent', {
