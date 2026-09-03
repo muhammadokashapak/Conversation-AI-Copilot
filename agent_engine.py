@@ -334,15 +334,15 @@ MODELS_CATALOG = [
         "description": "Lightning-fast open-weights execution on Groq LPU with full GHL function calling."
     },
 
-    # Puter.js Free In-Browser AI (xAI Grok)
+    # Puter.js Free In-Browser AI (xAI Grok — Fast Variant)
     {
         "id": "x-ai/grok-4.6",
-        "name": "xAI Grok 4.6 (Puter.js Free)",
+        "name": "xAI Grok 3 Mini (Puter.js Free)",
         "provider": "puter",
         "category": "Puter.js Free AI",
-        "badge": "🚀 Free • xAI Grok",
+        "badge": "⚡ Free • Fast xAI",
         "supports_tools": False,
-        "description": "State-of-the-art xAI Grok 4.6 model running client-side via Puter.js. Ultra-fast, zero setup, completely free."
+        "description": "Fast xAI Grok 3 Mini via Puter.js — instant responses, no thinking delay. Runs client-side, zero API key, completely free."
     },
 
     # OpenRouter Multi-Key Pool Gateway
@@ -1605,3 +1605,6 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
                 return {"success": False, "error": f"Unknown tool: {tool_name}"}
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+
+

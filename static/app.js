@@ -4029,7 +4029,7 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                 providerBadge.style.background = 'rgba(99, 102, 241, 0.12)';
                 providerBadge.style.borderColor = 'rgba(99, 102, 241, 0.35)';
                 providerBadge.style.color = '#818cf8';
-                providerBadge.innerHTML = `🚀 Puter.js AI: <strong>xAI Grok 4.6</strong> (Free In-Browser Engine)`;
+                providerBadge.innerHTML = `🚀 Puter.js AI: <strong>xAI Grok 3 Mini</strong> (Free • Fast In-Browser)`;
                 botBodyEl.appendChild(providerBadge);
                 recordedBadges.push({ type: 'provider_info', text: providerBadge.innerHTML });
 
@@ -4037,17 +4037,17 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                 const messagesPayload = [
                     {
                         role: "system",
-                        content: "You are an expert GoHighLevel (GHL) Technical Copilot & Solutions Architect. Provide direct, highly accurate, and practical solutions. Whenever building funnels or code, provide 100% complete production-ready code blocks without cutting off."
+                        content: "You are an expert GoHighLevel (GHL) Technical Copilot. Be direct, concise, and skip unnecessary deliberation. Provide practical solutions immediately. For code requests, provide complete production-ready code."
                     }
                 ];
 
                 if (Array.isArray(history) && history.length > 0) {
-                    const recentHist = history.slice(-6);
+                    const recentHist = history.slice(-4);
                     for (const h of recentHist) {
                         if (h.content) {
                             messagesPayload.push({
                                 role: h.role === 'assistant' ? 'assistant' : 'user',
-                                content: h.content
+                                content: h.content.substring(0, 2000)
                             });
                         }
                     }
@@ -4056,12 +4056,13 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
 
                 let puterSuccess = false;
 
-                // Attempt 1: Streaming mode via puter.ai.chat
+                // Attempt 1: Streaming mode via puter.ai.chat (fast model variant)
                 try {
-                    const stream = await puter.ai.chat(puterPrompt, {
-                        model: 'x-ai/grok-4.6',
-                        messages: messagesPayload,
-                        stream: true
+                    const stream = await puter.ai.chat(messagesPayload, {
+                        model: 'grok-3-mini',
+                        stream: true,
+                        temperature: 0.3,
+                        max_tokens: 4096
                     });
 
                     if (stream && (typeof stream[Symbol.asyncIterator] === 'function' || stream[Symbol.iterator])) {
@@ -4076,13 +4077,38 @@ Please provide the production-ready responsive HTML/CSS landing page code, HighL
                         puterSuccess = true;
                     }
                 } catch (streamErr) {
-                    console.warn('Puter streaming mode failed, attempting direct chat call:', streamErr);
+                    console.warn('Puter streaming (grok-3-mini) failed, trying grok-3-fast:', streamErr);
+                    
+                    // Attempt 1b: Try grok-3-fast as fallback
+                    try {
+                        const stream2 = await puter.ai.chat(messagesPayload, {
+                            model: 'grok-3-fast',
+                            stream: true,
+                            temperature: 0.3,
+                            max_tokens: 4096
+                        });
+                        if (stream2 && (typeof stream2[Symbol.asyncIterator] === 'function' || stream2[Symbol.iterator])) {
+                            for await (const part of stream2) {
+                                if (part?.text) {
+                                    enqueueIncomingChunk(part.text);
+                                    puterSuccess = true;
+                                }
+                            }
+                        } else if (stream2?.message?.content) {
+                            enqueueIncomingChunk(stream2.message.content);
+                            puterSuccess = true;
+                        }
+                    } catch (err2) {
+                        console.warn('grok-3-fast also failed, trying original grok-4.6:', err2);
+                    }
                 }
 
-                // Attempt 2: Direct call as demonstrated in user snippet
+                // Attempt 2: Direct call with original grok-4.6 as last resort
                 if (!puterSuccess) {
                     const directRes = await puter.ai.chat(puterPrompt, {
-                        model: 'x-ai/grok-4.6'
+                        model: 'x-ai/grok-4.6',
+                        temperature: 0.3,
+                        max_tokens: 4096
                     });
 
                     const replyContent = directRes?.message?.content || (typeof directRes === 'string' ? directRes : (directRes?.text || ''));
