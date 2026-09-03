@@ -123,8 +123,16 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-# In-memory authentication database & session store
-USERS_DB = {
+class UpdateUserRequest(BaseModel):
+    email: str
+    new_password: Optional[str] = None
+    name: Optional[str] = None
+    role: Optional[str] = None
+
+# Persistent authentication database (saved to users.json)
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
+
+DEFAULT_USERS_DB = {
     "muhammad.okasha2146@gmail.com": {
         "email": "muhammad.okasha2146@gmail.com",
         "password": "okashaadmin",
@@ -134,18 +142,53 @@ USERS_DB = {
     },
     "test@gmail.com": {
         "email": "test@gmail.com",
-        "password": "tum12345678",
+        "password": "12345678",
         "name": "Test User",
         "role": "Member",
         "avatar": "👤"
     }
 }
 
+def load_users_db() -> Dict[str, Dict[str, Any]]:
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # Ensure test user password is updated if it was previously old value
+                if "test@gmail.com" in data and data["test@gmail.com"].get("password") == "tum12345678":
+                    data["test@gmail.com"]["password"] = "12345678"
+                    save_users_db(data)
+                return data
+        except Exception as e:
+            logger.error(f"Error loading users.json: {e}")
+    save_users_db(DEFAULT_USERS_DB)
+    return DEFAULT_USERS_DB
+
+def save_users_db(data: Dict[str, Dict[str, Any]]):
+    try:
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving users.json: {e}")
+
+USERS_DB = load_users_db()
+
 ACTIVE_SESSIONS: Dict[str, Dict[str, Any]] = {}
 import secrets as _secrets
 
+def get_current_user_from_req(request: Request) -> Optional[Dict[str, Any]]:
+    auth_header = request.headers.get("Authorization", "")
+    token = ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+    if token and token in ACTIVE_SESSIONS:
+        return ACTIVE_SESSIONS[token]
+    return None
+
 @app.post("/api/auth/login")
 async def auth_login(req: LoginRequest):
+    global USERS_DB
+    USERS_DB = load_users_db()
     email = req.email.strip().lower()
     password = req.password.strip()
 
@@ -171,17 +214,12 @@ async def auth_login(req: LoginRequest):
 
 @app.get("/api/auth/me")
 async def auth_me(request: Request):
-    auth_header = request.headers.get("Authorization", "")
-    token = ""
-    if auth_header.startswith("Bearer "):
-        token = auth_header[7:].strip()
-    
-    if not token or token not in ACTIVE_SESSIONS:
+    user = get_current_user_from_req(request)
+    if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-
     return {
         "success": True,
-        "user": ACTIVE_SESSIONS[token]
+        "user": user
     }
 
 @app.post("/api/auth/logout")
@@ -192,6 +230,84 @@ async def auth_logout(request: Request):
         if token in ACTIVE_SESSIONS:
             del ACTIVE_SESSIONS[token]
     return {"success": True, "message": "Logged out successfully"}
+
+# --- Admin User Management Endpoints ---
+@app.get("/api/admin/users")
+async def admin_get_users(request: Request):
+    user = get_current_user_from_req(request)
+    if not user or user.get("role") != "Master Admin":
+        raise HTTPException(status_code=403, detail="Access denied. Master Admin privilege required.")
+    
+    global USERS_DB
+    USERS_DB = load_users_db()
+    users_list = []
+    for u in USERS_DB.values():
+        users_list.append({
+            "email": u["email"],
+            "name": u["name"],
+            "role": u["role"],
+            "avatar": u["avatar"],
+            "password": u["password"]  # Admin can view/manage passwords
+        })
+    return {"success": True, "users": users_list}
+
+@app.post("/api/admin/update-user")
+async def admin_update_user(req: UpdateUserRequest, request: Request):
+    user = get_current_user_from_req(request)
+    if not user or user.get("role") != "Master Admin":
+        raise HTTPException(status_code=403, detail="Access denied. Master Admin privilege required.")
+
+    global USERS_DB
+    USERS_DB = load_users_db()
+    target_email = req.email.strip().lower()
+
+    if target_email not in USERS_DB:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    if req.new_password and req.new_password.strip():
+        USERS_DB[target_email]["password"] = req.new_password.strip()
+    if req.name and req.name.strip():
+        USERS_DB[target_email]["name"] = req.name.strip()
+    if req.role and req.role.strip():
+        USERS_DB[target_email]["role"] = req.role.strip()
+
+    save_users_db(USERS_DB)
+    logger.info(f"Master Admin updated user account: {target_email}")
+
+    return {
+        "success": True,
+        "message": f"User {target_email} updated successfully.",
+        "user": USERS_DB[target_email]
+    }
+
+@app.post("/api/admin/create-user")
+async def admin_create_user(req: Dict[str, Any], request: Request):
+    user = get_current_user_from_req(request)
+    if not user or user.get("role") != "Master Admin":
+        raise HTTPException(status_code=403, detail="Access denied. Master Admin privilege required.")
+
+    email = req.get("email", "").strip().lower()
+    password = req.get("password", "").strip()
+    name = req.get("name", "").strip() or "New Member"
+    role = req.get("role", "Member").strip()
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and Password are required.")
+
+    global USERS_DB
+    USERS_DB = load_users_db()
+    if email in USERS_DB:
+        raise HTTPException(status_code=400, detail="A user with this email already exists.")
+
+    USERS_DB[email] = {
+        "email": email,
+        "password": password,
+        "name": name,
+        "role": role,
+        "avatar": "👤" if role != "Master Admin" else "👑"
+    }
+    save_users_db(USERS_DB)
+    return {"success": True, "message": f"User {email} created successfully.", "user": USERS_DB[email]}
 
 @app.get("/health")
 async def health_check():

@@ -66,6 +66,175 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userDisplayName) userDisplayName.textContent = user.name || user.email;
         if (userDisplayRole) userDisplayRole.textContent = user.role || 'Member';
         if (userAvatarBadge) userAvatarBadge.textContent = user.avatar || '👤';
+
+        // Reveal Admin Management gear icon only for Master Admin
+        const adminUsersBtn = document.getElementById('admin-users-btn');
+        if (adminUsersBtn) {
+            if (user.role === 'Master Admin' || user.email === 'muhammad.okasha2146@gmail.com') {
+                adminUsersBtn.style.display = 'inline-flex';
+            } else {
+                adminUsersBtn.style.display = 'none';
+            }
+        }
+    }
+
+    // ==================== MASTER ADMIN USERS & PASSWORD CONTROLLER ====================
+    const adminModalOverlay = document.getElementById('admin-modal-overlay');
+    const adminUsersBtn = document.getElementById('admin-users-btn');
+    const closeAdminModalBtn = document.getElementById('close-admin-modal-btn');
+    const adminDoneBtn = document.getElementById('admin-done-btn');
+    const adminUsersTableContainer = document.getElementById('admin-users-table-container');
+    const adminFeedbackBanner = document.getElementById('admin-feedback-banner');
+    const adminEditTargetEmail = document.getElementById('admin-edit-target-email');
+    const adminEditPasswordInput = document.getElementById('admin-edit-password');
+    const adminEditNameInput = document.getElementById('admin-edit-name');
+    const adminSaveEditBtn = document.getElementById('admin-save-edit-btn');
+    const adminCancelEditBtn = document.getElementById('admin-cancel-edit-btn');
+
+    let currentEditingEmail = '';
+
+    async function loadAdminUsersList() {
+        if (!adminUsersTableContainer) return;
+        adminUsersTableContainer.innerHTML = '<div style="padding:16px; text-align:center; color:#94a3b8; font-size:13px;">Loading users...</div>';
+        const token = localStorage.getItem('copilot_auth_token');
+
+        try {
+            const res = await fetch('/api/admin/users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                renderAdminUsersTable(data.users);
+            } else {
+                adminUsersTableContainer.innerHTML = `<div style="padding:16px; text-align:center; color:#f87171; font-size:13px;">${data.detail || 'Failed to load users.'}</div>`;
+            }
+        } catch (err) {
+            adminUsersTableContainer.innerHTML = `<div style="padding:16px; text-align:center; color:#f87171; font-size:13px;">Network error loading users.</div>`;
+        }
+    }
+
+    function renderAdminUsersTable(users) {
+        if (!adminUsersTableContainer) return;
+        if (!users || users.length === 0) {
+            adminUsersTableContainer.innerHTML = '<div style="padding:16px; text-align:center; color:#94a3b8; font-size:13px;">No users found.</div>';
+            return;
+        }
+
+        let html = '<table style="width:100%; border-collapse:collapse; font-size:12.5px; text-align:left;">';
+        html += '<thead style="background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); color:#94a3b8; text-transform:uppercase; font-size:11px;"><tr><th style="padding:10px 12px;">User</th><th style="padding:10px 12px;">Role</th><th style="padding:10px 12px;">Password</th><th style="padding:10px 12px; text-align:right;">Actions</th></tr></thead><tbody>';
+
+        users.forEach(u => {
+            html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+                <td style="padding:10px 12px;">
+                    <div style="font-weight:600; color:#ffffff;">${u.avatar || '👤'} ${u.name || 'User'}</div>
+                    <div style="font-size:11.5px; color:#94a3b8;">${u.email}</div>
+                </td>
+                <td style="padding:10px 12px;">
+                    <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; background:${u.role === 'Master Admin' ? 'rgba(234,179,8,0.15); color:#facc15;' : 'rgba(59,130,246,0.15); color:#60a5fa;'}">${u.role}</span>
+                </td>
+                <td style="padding:10px 12px; font-family:monospace; color:#10b981; font-weight:600;">
+                    ${u.password || '••••••••'}
+                </td>
+                <td style="padding:10px 12px; text-align:right;">
+                    <button type="button" class="admin-select-edit-btn" data-email="${u.email}" data-name="${u.name}" data-pwd="${u.password}" style="padding:4px 10px; background:#334155; border:none; border-radius:6px; color:#f8fafc; font-size:11.5px; font-weight:500; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='#10b981'" onmouseout="this.style.background='#334155'">Edit / Change Pwd</button>
+                </td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        adminUsersTableContainer.innerHTML = html;
+
+        // Bind Edit buttons
+        adminUsersTableContainer.querySelectorAll('.admin-select-edit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetBtn = e.currentTarget;
+                currentEditingEmail = targetBtn.dataset.email;
+                if (adminEditTargetEmail) adminEditTargetEmail.textContent = currentEditingEmail;
+                if (adminEditNameInput) adminEditNameInput.value = targetBtn.dataset.name || '';
+                if (adminEditPasswordInput) {
+                    adminEditPasswordInput.value = targetBtn.dataset.pwd || '';
+                    adminEditPasswordInput.focus();
+                }
+            });
+        });
+    }
+
+    if (adminUsersBtn) {
+        adminUsersBtn.addEventListener('click', () => {
+            if (adminModalOverlay) {
+                adminModalOverlay.style.display = 'flex';
+                loadAdminUsersList();
+            }
+        });
+    }
+
+    function closeAdminModal() {
+        if (adminModalOverlay) adminModalOverlay.style.display = 'none';
+        if (adminFeedbackBanner) adminFeedbackBanner.style.display = 'none';
+    }
+
+    if (closeAdminModalBtn) closeAdminModalBtn.addEventListener('click', closeAdminModal);
+    if (adminDoneBtn) adminDoneBtn.addEventListener('click', closeAdminModal);
+
+    if (adminCancelEditBtn) {
+        adminCancelEditBtn.addEventListener('click', () => {
+            currentEditingEmail = '';
+            if (adminEditTargetEmail) adminEditTargetEmail.textContent = 'None';
+            if (adminEditPasswordInput) adminEditPasswordInput.value = '';
+            if (adminEditNameInput) adminEditNameInput.value = '';
+        });
+    }
+
+    if (adminSaveEditBtn) {
+        adminSaveEditBtn.addEventListener('click', async () => {
+            if (!currentEditingEmail) {
+                alert('Please select a user from the table above by clicking "Edit / Change Pwd".');
+                return;
+            }
+
+            const newPwd = (adminEditPasswordInput.value || '').trim();
+            const newName = (adminEditNameInput.value || '').trim();
+            const token = localStorage.getItem('copilot_auth_token');
+
+            adminSaveEditBtn.disabled = true;
+            adminSaveEditBtn.textContent = 'Saving...';
+
+            try {
+                const res = await fetch('/api/admin/update-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        email: currentEditingEmail,
+                        new_password: newPwd,
+                        name: newName
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    if (adminFeedbackBanner) {
+                        adminFeedbackBanner.style.display = 'block';
+                        adminFeedbackBanner.style.background = 'rgba(16, 185, 129, 0.15)';
+                        adminFeedbackBanner.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+                        adminFeedbackBanner.style.color = '#34d399';
+                        adminFeedbackBanner.textContent = `Password and details for ${currentEditingEmail} updated successfully!`;
+                        setTimeout(() => { if (adminFeedbackBanner) adminFeedbackBanner.style.display = 'none'; }, 4000);
+                    }
+                    loadAdminUsersList();
+                } else {
+                    alert(data.detail || 'Failed to update user.');
+                }
+            } catch (err) {
+                alert('Network error while updating user.');
+            } finally {
+                adminSaveEditBtn.disabled = false;
+                adminSaveEditBtn.textContent = 'Save Changes';
+            }
+        });
     }
 
     if (togglePwdBtn && loginPasswordInput) {
