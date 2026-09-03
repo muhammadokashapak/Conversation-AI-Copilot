@@ -107,6 +107,14 @@ def classify_prompt_intent(prompt: str) -> str:
     if _DIRECT_ASSET_PATTERNS.search(lower) and not any(kw in lower for kw in ['all 14 sections', 'full blueprint', 'complete funnel', 'landing page and crm']):
         return 'quick_answer'
 
+    # If prompt mentions changing/modifying design, color, styling, or has an attached document being updated
+    if any(phrase in lower for phrase in [
+        'need changes in', 'changes in its', 'change the color', 'change design', 'color scheme',
+        'update the design', 'modify the code', 'tweak the design', 'make changes', 'change in it',
+        'liked it but', 'good but i need', 'good, but i need', 'user attached files'
+    ]) and not any(kw in lower for kw in ['configuration:', 'target industry:', 'all 14 sections']):
+        return 'iteration'
+
     # Check for direct full build commands
     if _FULL_BUILD_PATTERNS.search(lower):
         return 'full_build'
@@ -927,11 +935,28 @@ MANDATORY GOHIGHLEVEL (GHL) OPERATIONAL RULES
 =============================================================================
 {base_rules}
 =============================================================================
-TASK DIRECTIVE: ITERATIVE MODIFICATION & REFINEMENT
+TASK DIRECTIVE: DOCUMENT EDITING, DESIGN REFINEMENT & CHANGE LOG
 =============================================================================
-- The user is modifying or refining a previously discussed configuration or asset.
-- Focus on the requested modifications with senior-architect precision while keeping full code blocks complete.
-- DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
+The user is providing an existing codebase, funnel, landing page, or document (either in chat or as an attached file like `landing_page.html`) and requesting specific changes (e.g. colors, visual styling, layout tweaks, copy adjustments, or feature additions).
+
+YOUR INSTRUCTIONS:
+1. IMPLEMENT THE REQUESTED CHANGES DIRECTLY into the code or document provided by the user.
+   • If the user requests color/design changes, apply the new color palette throughout the CSS and components (backgrounds, text gradients, borders, buttons, cards).
+   • Maintain 100% of the working logic (navigation, forms, validation, and functionality) unless specifically asked to change it.
+   • Ensure the updated code is production-ready and fully contained.
+
+2. STRUCTURE YOUR RESPONSE IN TWO DISTINCT PARTS:
+
+   PART 1: UPDATED CODE / DOCUMENT
+   • Provide the fully updated, revised code inside a clean code block (e.g. ```html ... ```).
+
+   PART 2: SUMMARY OF CHANGES MADE (What Was Changed)
+   • Provide a clear, bullet-pointed summary explaining EXACTLY what changes were made in the code/design:
+     - **Color Palette & Design Updates:** List the exact colors/shades updated (e.g. Old theme vs New theme).
+     - **Component / Styling Adjustments:** List buttons, typography, cards, or hero elements modified.
+     - **Functional / Structural Changes (if requested):** Note any new sections, forms, or steps added or updated.
+   • If the user asked for changes in non-code elements (such as workflows, tags, or copy), explain those specific changes clearly and concisely.
+   • DO NOT generate unrequested 14-section CRM architectures or redundant tables. Focus strictly on delivering the updated code/document and explaining the modifications made.
 {tool_block}
 """
 
