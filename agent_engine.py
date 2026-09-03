@@ -241,7 +241,11 @@ def compress_history(
         max_messages = 6 if provider == 'gemini' else 4
 
     trimmed = list(history[-max_messages:])
-    max_assistant_chars = 1000 if provider == 'groq' else 1800
+    # For iteration: preserve full previous code/document context (up to 35,000 chars) so model knows the exact code to edit!
+    if intent == "iteration":
+        max_assistant_chars = 35000
+    else:
+        max_assistant_chars = 1000 if provider == 'groq' else 2500
 
     compressed = []
     for msg in trimmed:
@@ -278,12 +282,12 @@ def compress_history(
 def detect_truncation(text: str) -> bool:
     """
     Detects if a response was genuinely truncated mid-generation.
-    Only triggers on definitive structural indicators, NOT on missing punctuation.
+    Only triggers on definitive structural indicators, NOT on natural conclusions.
     """
-    if not text or len(text) < 100:
+    if not text or len(text) < 150:
         return False
 
-    # Check if an HTML application was started but not closed
+    # Check if an HTML application was started but </html> was not closed
     if "<!DOCTYPE html" in text or "<html" in text:
         if "</html>" not in text:
             return True
@@ -293,16 +297,15 @@ def detect_truncation(text: str) -> bool:
     if fence_count % 2 != 0:
         return True
 
-    # Check if output ended abruptly mid-sentence or mid-bullet
+    # Check if output ended abruptly mid-token, mid-sentence, or mid-tag
     clean_end = text.rstrip()
-    if clean_end and clean_end[-1] in ('<', '=', '{', '[', ':', '•', '-'):
+    if clean_end and clean_end[-1] in ('<', '=', '{', '[', '•', '-'):
         return True
 
-    # Check if a workflow section was started but not concluded
+    # In full_build: if workflows were started (e.g. Workflow 1), check that later workflows exist
     lower = text.lower()
-    if "workflow 1" in lower or "workflow 2" in lower or "workflow 3" in lower:
-        if not ("workflow 4" in lower or "workflow 5" in lower or "enrollment completed" in lower or "onboarding" in lower):
-            # If workflows were started but cut off prematurely before completion
+    if "task directive: complete production" in lower or "step 1: opt-in" in lower:
+        if "workflow 1" in lower and not any(w in lower for w in ["workflow 4", "workflow 5", "summary", "post-funnel"]):
             return True
 
     return False
@@ -1119,9 +1122,14 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
                             try:
                                 recent_tail = accumulated_text[-2400:]
                                 last_cutoff = accumulated_text[-80:].replace('\n', ' ')
+                                if intent == "iteration":
+                                    cont_user_msg = f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Finish all remaining code and then output the complete 'SUMMARY OF CHANGES MADE' section."
+                                else:
+                                    cont_user_msg = f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Finish all remaining HTML tags, then output the complete Funnel Step Map, HighLevel Pipeline Stages & Custom Fields tables, and all 5 Workflows in full detail."
+
                                 cont_contents = [
                                     types.Content(role="model", parts=[types.Part.from_text(text=recent_tail)]),
-                                    types.Content(role="user", parts=[types.Part.from_text(text=f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Finish all remaining HTML tags, then output the complete Funnel Step Map, HighLevel Pipeline Stages & Custom Fields tables, and all 5 Workflows in full detail.")])
+                                    types.Content(role="user", parts=[types.Part.from_text(text=cont_user_msg)])
                                 ]
                                 cont_config = {
                                     "temperature": temp,
@@ -1142,8 +1150,8 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
                                     gemini_key_pool.mark_key_depleted(active_gemini_key, 429, str(e_cont))
                                 break
 
-                        # Check if still truncated after Gemini loop exhausted
-                        if stream_started and detect_truncation(accumulated_text) and not is_fallback and self.groq_key:
+                        # Check if genuinely truncated after Gemini loop exhausted (at least 1000 chars generated)
+                        if stream_started and len(accumulated_text) > 1000 and detect_truncation(accumulated_text) and not is_fallback and self.groq_key:
                             recent_tail = accumulated_text[-2000:]
                             last_cutoff = accumulated_text[-80:].replace('\n', ' ')
                             logger.info(f"Gemini capacity reached mid-generation. Handing off to Groq Cloud...")
