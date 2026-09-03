@@ -285,10 +285,17 @@ def detect_truncation(text: str) -> bool:
     if fence_count % 2 != 0:
         return True
 
-    # Check for mid-tag or mid-attribute cutoff
+    # Check if output ended abruptly mid-sentence or mid-bullet
     clean_end = text.rstrip()
-    if clean_end and clean_end[-1] in ('<', '=', '{', '['):
+    if clean_end and clean_end[-1] in ('<', '=', '{', '[', ':', '•', '-'):
         return True
+
+    # Check if a workflow section was started but not concluded
+    lower = text.lower()
+    if "workflow 1" in lower or "workflow 2" in lower or "workflow 3" in lower:
+        if not ("workflow 4" in lower or "workflow 5" in lower or "enrollment completed" in lower or "onboarding" in lower):
+            # If workflows were started but cut off prematurely before completion
+            return True
 
     return False
 
@@ -935,18 +942,62 @@ TASK DIRECTIVE: ITERATIVE MODIFICATION & REFINEMENT
 =============================================================================
 TASK DIRECTIVE: COMPLETE PRODUCTION ARCHITECTURE & FULL CODE BUILD
 =============================================================================
-You are a Lead Solutions Architect. The user is requesting a FULL PRODUCTION BUILD.
+You are a Lead GoHighLevel Solutions Architect. The user is requesting a FULL PRODUCTION BUILD.
 Output all 4 sections in this exact order with ZERO preamble text:
 
 1. Complete Single-File HTML App (```html <!DOCTYPE html> ... </html>```)
    • Use Tailwind CSS CDN (`<script src="https://cdn.tailwindcss.com"></script>`) with utility classes.
-   • ALL funnel steps inside ONE file with JavaScript tab navigation.
-   • DO NOT split into 5 separate HTML files with duplicate <!DOCTYPE html> headers.
-   • Guarantee code completes from <!DOCTYPE html> to </html> without stopping.
+   • ALL funnel steps MUST be fully built inside this ONE file with interactive JavaScript tab navigation (`switchStep(n)`).
+   • Fully build EVERY step with real high-converting copy, real inputs, real CTA buttons, and mock payment/order forms:
+     - Step 1: Opt-In (Hero, benefit bullets, lead form with E.164 phone + email)
+     - Step 2: VSL Video (Headline, video player container with mock play + 80% completion JS event trigger, primary CTA to checkout)
+     - Step 3: Order Checkout (2-Step order form layout, order summary, bump offer checkbox, Stripe mock card element, guarantee badges)
+     - Step 4: OTO Upsell Page (Urgency banner, value stack, 1-click accept button + no-thanks bypass link)
+     - Step 5: Thank You Page (Access credentials notice, instant onboarding schedule calendar embed placeholder, community link)
+   • Code MUST be 100% complete and self-contained from `<!DOCTYPE html>` to `</html>` without truncation or placeholders.
 
 2. Funnel Step Map & URLs (Compact Markdown Table)
+   • Columns: Step # | Step Name | Path/Slug | Page Type | Primary CTA / Action | Next Step Trigger
+
 3. HighLevel Pipeline Stages, Custom Fields & Tags (Compact Markdown Tables)
-4. Connected Drop-off Recovery Workflows (Triggers, wait timers, SMS/Email copy)
+   • Pipeline Stages: Order | Stage Name | Entry Trigger (Explicit condition, e.g. "Order Form Step 1 Submitted" NOT vague "Page Viewed") | Exit / Win Condition
+   • Contact Custom Fields: Field Name | Unique Key | Data Type | Implementation Note (e.g. explain how client-side JS sends VSL watch progress via GHL Custom Inbound Webhook: `https://services.leadconnectorhq.com/hooks/...`)
+   • Contact Tags Taxonomy: Tag Name | Exact Application Trigger | Removal Trigger
+   • Magic Link Architecture Note: Explicitly state that magic video URLs use signed secure query parameters (`?token={{ contact.access_token }}&cid={{ contact.id }}`) validated via GHL custom value / webhook, not an unauthenticated raw contact ID.
+
+4. Production-Ready HighLevel Workflow Automations (Separate, Clean Workflows)
+   DO NOT mix lead follow-up and cart recovery into one vague text block. Provide complete, fully specified workflows with exact timings, if/else branch logic, and full SMS/Email copy:
+
+   • WORKFLOW 1: Instant VSL Access & Lead Delivery
+     - Trigger: Form Submitted (Step 1 Opt-In)
+     - Actions: Add tag `lead:vsl-optin`, Create Opportunity in Pipeline Stage 1, Send Instant SMS (with signed magic link) + Confirmation Email.
+
+   • WORKFLOW 2: 24-Hour Evergreen VSL Replay & Urgency Cadence (Lead Recovery)
+     - Trigger: Tag `lead:vsl-optin` Added
+     - Enrollment Filter: Contact does NOT have `intent:checkout-started` or `customer:core-member`
+     - Exact Cadence:
+       • Wait 2h ➔ If VSL < 50% watched, send SMS 1 (Replay reminder)
+       • Wait 6h (Total 8h) ➔ If no checkout, send Email 1 (Key takeaways & high-ticket case study)
+       • Wait 16h (Total 24h) ➔ Send Urgency SMS + Email (24-hour masterclass access expiring)
+
+   • WORKFLOW 3: 2-Step Order Form Cart Abandonment Sequence (Cart Recovery)
+     - Trigger: Order Form Step 1 Completed (Page = /checkout)
+     - Actions: Add tag `intent:checkout-started`, Move Pipeline Opportunity to "Checkout Initiated"
+     - Exact Cadence & Stop Conditions:
+       • Wait 15 Minutes
+       • If/Else Condition: Has tag `customer:core-member`? ➔ YES: Remove from workflow. ➔ NO: Add tag `abandoned:checkout`, Send SMS #1 ("Hey {{ contact.first_name }}, your enrollment spot is reserved. Complete here: ...")
+       • Wait 3 Hours 45 Minutes (Total 4 Hours)
+       • If/Else Condition: Has tag `customer:core-member`? ➔ YES: Remove from workflow. ➔ NO: Send Email #2 (Addressing checkout friction, FAQs, guarantee reminder)
+       • Wait 20 Hours (Total 24 Hours)
+       • If/Else Condition: Has tag `customer:core-member`? ➔ YES: Remove from workflow. ➔ NO: Send Final Recovery SMS & Email (Final cart expiration & spot forfeiture)
+
+   • WORKFLOW 4: Core Purchase & OTO Fulfillment
+     - Trigger: Payment Received (Product = Core Program $997)
+     - Actions: Add tag `customer:core-member`, Remove tag `abandoned:checkout`, Move Pipeline Opportunity to "Enrolled - Core Member", Send Welcome & Onboarding Email.
+     - Trigger OTO: Payment Received (Product = VIP Implementation Upgrade $497) ➔ Add tag `customer:vip-upgrade`, Move Pipeline to "Enrolled - VIP Upgrade".
+
+   • WORKFLOW 5: Onboarding & Activation Verification
+     - Dual-Event Logic: Clarify that moving to "Onboarding Completed" requires Appointment Status = "Booked / Confirmed" on the GHL Calendar AND Membership Portal Access Granted.
 
 DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
 {tool_block}
@@ -1056,7 +1107,7 @@ DO NOT output bracketed tags like `[RECOMMENDED]`, `[VERIFIED]`.
                                 last_cutoff = accumulated_text[-80:].replace('\n', ' ')
                                 cont_contents = [
                                     types.Content(role="model", parts=[types.Part.from_text(text=recent_tail)]),
-                                    types.Content(role="user", parts=[types.Part.from_text(text=f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Complete all remaining sections and close all HTML tags.")])
+                                    types.Content(role="user", parts=[types.Part.from_text(text=f"Continue EXACTLY from: '{last_cutoff}'. Do NOT repeat any previous text. Finish all remaining HTML tags, then output the complete Funnel Step Map, HighLevel Pipeline Stages & Custom Fields tables, and all 5 Workflows in full detail.")])
                                 ]
                                 cont_config = {
                                     "temperature": temp,
